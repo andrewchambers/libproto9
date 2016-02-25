@@ -356,7 +356,7 @@ const pack_tversion = {buf, msg
 	;;
 	std.putle16(buf[0:2], msg.tag)
 	std.putle32(buf[2:6], msg.size)
-	std.putle32(buf[6:8], msg.version.len)
+	std.putle16(buf[6:8], msg.version.len)
 	off += msg.version.len
 	if buf.len < off
 		-> `std.None
@@ -372,7 +372,7 @@ const unpack_tversion = {buf
 	if buf.len < len
 		-> `std.None
 	;;
-	verlen = std.getle16(buf[len:len+2])
+	verlen = std.getle16(buf[6:8])
 	len += verlen
 	if buf.len < len
 		-> `std.None
@@ -380,7 +380,7 @@ const unpack_tversion = {buf
 	-> `std.Some `Tversion [
 		.tag=std.getle16(buf[0:2]),
 		.size=std.getle32(buf[2:6]),
-		.version=buf[6:6+verlen],
+		.version=buf[8:8+verlen],
 	]
 }
 
