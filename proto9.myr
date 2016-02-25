@@ -1,0 +1,386 @@
+use std
+use bio
+
+pkg proto9 =
+	
+	const HeaderSize = 4 + 1
+	const ReadOverhead = HeaderSize + 4
+	const WriteOverhead = HeaderSize + 4 + 8 + 4
+	
+	const NoTag : uint16 = 0xffff
+	const NoFid : uint32 = 0xffffffff
+	
+	const Dmdir    : uint32 = 0x80000000
+	const Dmappend : uint32 = 0x40000000
+	const Dmexcl   : uint32 = 0x20000000
+	const Dmmount  : uint32 = 0x10000000
+	const Dmauth   : uint32 = 0x08000000
+	const Dmtmp    : uint32 = 0x04000000
+	const Dmread   : uint32 = 0x4
+	const Dmwrite  : uint32 = 0x2
+	const Dmexec   : uint32 = 0x1
+	
+	const Qtfile   : uint8 = 0x00
+	const Qttmp    : uint8 = 0x04
+	const Qtauth   : uint8   = 0x08
+	const Qtmount  : uint8  = 0x10
+	const Qtexcl   : uint8   = 0x20
+	const Qtappend : uint8 = 0x40
+	const Qtdir    : uint8   = 0x80
+	
+	type msg = union
+		`Tversion	tversion
+		`Rversion	rversion
+		`Tauth	tauth
+		`Rauth	rauth
+		`Rerror	rerror
+		`Tflush	tflush
+		`Rflush	rflush
+		`Tattach	tattach
+		`Rattach	rattach
+		`Twalk	twalk
+		`Rwalk	rwalk
+		`Topen	topen
+		`Ropen	ropen
+		`Tcreate	tcreate
+		`Rcreate	rcreate
+		`Tread	tread
+		`Rread	rread
+		`Twrite	twrite
+		`Rwrite	rwrite
+		`Tstat	tstat
+		`Rstat	rstat
+		`Tclunk	tclunk
+		`Rclunk	rclunk
+		`Tremove	tremove
+		`Rremove	rremove
+		`Twstat	twstat
+		`Rwstat	rwstat
+	;;
+
+	type qid = struct
+		ty	: uint8
+		vers	: uint32
+		path	: uint64
+	;;
+
+	type stat = struct
+		ty	: uint16
+		dev	: uint32
+		qid	: qid
+		mode	: uint32
+		atime	: uint32
+		mtime	: uint32
+		len	: uint64
+		name	: byte[:]
+		uid	: byte[:]
+		gid	: byte[:]
+		muid	: byte[:]
+	;;
+
+	type tversion = struct
+		tag	: uint16
+		size	: uint32
+		version	: byte[:]
+	;;
+
+	type rversion = struct
+		tag	: uint16
+		size	: uint32
+		version	: byte[:]
+	;;
+
+	type tauth = struct
+		tag	: uint16
+		afid	: uint32
+		uname	: byte[:]
+		aname	: byte[:]
+	;;
+
+	type rauth = struct
+		tag	: uint16
+		aqid	: qid
+	;;
+
+	type rerror = struct
+		tag	: uint16
+		err	: byte[:]
+	;;
+
+	type tflush = struct
+		tag	: uint16
+		oldtag	: uint16
+	;;
+
+	type rflush = struct
+		tag	: uint16
+	;;
+
+	type tattach = struct
+		tag	: uint16
+		fid	: uint32
+		afid	: uint32
+		uname	: byte[:]
+		aname	: byte[:]
+	;;
+	
+	type rattach = struct
+		tag	: uint16
+		qid	: qid
+	;;
+
+	type twalk = struct
+		tag	: uint16
+		fid	: uint32
+		newfid	: uint32
+		nwnames	: uint16
+		wnames	: byte[:][16]
+	;;
+
+	type rwalk = struct
+		tag	: uint16
+		nnwqid	: uint16
+		nwqid	: qid[16]
+	;;
+
+	type topen = struct
+		tag	: uint16
+		fid	: uint32
+		mode	: uint8
+	;;
+
+	type ropen = struct
+		tag	: uint16
+		qid	: qid
+		iounit	: uint32
+	;;
+
+	type tcreate = struct
+		tag	: uint16
+		fid	: uint32
+		name	: byte[:]
+		perm	: uint32
+		mode	: uint8
+	;;
+
+	type rcreate = struct
+		tag	: uint16
+		qid	: qid
+		iounit	: uint32
+	;;
+
+	type tread = struct
+		tag	: uint16
+		fid	: uint32
+		off	: uint64
+		count	: uint32
+	;;
+
+	type rread = struct
+		tag	: uint16
+		data	: byte[:]
+	;;
+
+	type twrite = struct
+		tag	: uint16
+		fid	: uint32
+		off	: uint64
+		data	: byte[:]
+	;;
+
+	type rwrite = struct
+		tag	: uint16
+		count	: uint32
+	;;
+
+	type tclunk = struct
+		tag	: uint16
+		fid	: uint32
+	;;
+
+	type rclunk = struct
+		tag	: uint16
+	;;
+
+	type tremove = struct
+		tag	: uint16
+		fid	: uint32
+	;;
+
+	type rremove = struct
+		tag	: uint16
+	;;
+
+	type tstat = struct
+		tag	: uint16
+		fid	: uint32
+	;;
+
+	type rstat = struct
+		tag	: uint16
+		stat	: stat
+	;;
+
+	type twstat = struct
+		tag	: uint16
+		fid	: uint32
+		stat	: stat
+	;;
+
+	type rwstat = struct
+		tag	: uint16
+	;;
+	
+	const unpackmsg	: (buf : byte[:] -> std.option(msg))
+	const packmsg	: (buf : byte[:], m : msg -> std.option(byte[:]))
+;;
+
+const Mt_tversion	: uint8 = 100
+const Mt_rversion	: uint8 = 101
+const Mt_tauth		: uint8 = 102
+const Mt_rauth		: uint8 = 103
+const Mt_tattach	: uint8 = 104
+const Mt_rattach	: uint8 = 105
+const Mt_rerror		: uint8 = 107
+const Mt_tflush		: uint8 = 108
+const Mt_rflush		: uint8 = 109
+const Mt_twalk 		: uint8 = 110
+const Mt_rwalk		: uint8 = 111
+const Mt_topen		: uint8 = 112
+const Mt_ropen		: uint8 = 113
+const Mt_tcreate	: uint8 = 114
+const Mt_rcreate	: uint8 = 115
+const Mt_tread		: uint8 = 116
+const Mt_rread		: uint8 = 117
+const Mt_twrite		: uint8 = 118
+const Mt_rwrite		: uint8 = 119
+const Mt_tclunk		: uint8 = 120
+const Mt_rclunk		: uint8 = 121
+const Mt_tremove	: uint8 = 122
+const Mt_rremove	: uint8 = 123
+const Mt_tstat		: uint8 = 124
+const Mt_rstat		: uint8 = 125
+const Mt_twstat		: uint8 = 126
+const Mt_rwstat		: uint8 = 127
+
+const unpackmsg = {buf
+	if buf.len < 5
+		-> `std.None
+	;;
+	match buf[4] castto(uint8)
+	| Mt_tversion:	-> unpack_tversion(buf)
+	//| Mt_rversion:	-> rd_rversion(buf)
+	//| Mt_tauth:	-> rd_tauth(buf)
+	//| Mt_rauth:	-> rd_rauth(buf)
+	//| Mt_tattach:	-> rd_tattach(buf)
+	//| Mt_rattach:	-> rd_rattach(buf)
+	//| Mt_rerror:	-> rd_rerror(buf)
+	//| Mt_tflush:	-> rd_tflush(buf)
+	//| Mt_rflush:	-> rd_rflush(buf)
+	//| Mt_twalk :	-> rd_twalk(buf)
+	//| Mt_rwalk:	-> rd_rwalk(buf)
+	//| Mt_topen:	-> rd_topen(buf)
+	//| Mt_ropen:	-> rd_ropen(buf)
+	//| Mt_tcreate:	-> rd_tcreate(buf)
+	//| Mt_rcreate:	-> rd_rcreate(buf)
+	//| Mt_tread:	-> rd_tread(buf)
+	//| Mt_rread:	-> rd_rread(buf)
+	//| Mt_twrite:	-> rd_twrite(buf)
+	//| Mt_rwrite:	-> rd_rwrite(buf)
+	//| Mt_tclunk:	-> rd_tclunk(buf)
+	//| Mt_rclunk:	-> rd_rclunk(buf)
+	//| Mt_tremove:	-> rd_tremove(buf)
+	//| Mt_rremove:	-> rd_rremove(buf)
+	//| Mt_tstat:	-> rd_tstat(buf)
+	//| Mt_rstat:	-> rd_rstat(buf)
+	//| Mt_twstat:	-> rd_twstat(buf)
+	//| Mt_rwstat:	-> rd_rwstat(buf)
+	| _:
+		-> `std.None
+	;;
+}
+
+const packmsg = {buf, msg
+	var packed
+	
+	if buf.len < 4
+		-> `std.None
+	;;
+	
+	match msg
+	| `Tversion w:	packed =  pack_tversion(buf[4:], w)
+	//| `Rversion w:	packed =  wr_rversion(buf[4:], w)
+	//| `Tauth w:	packed =  wr_tauth(buf[4:], w)
+	//| `Rauth w:	packed =  wr_rauth(buf[4:], w)
+	//| `Rerror w:	packed =  wr_rerror(buf[4:], w)
+	//| `Tflush w:	packed =  wr_tflush(buf[4:], w)
+	//| `Rflush w:	packed =  wr_rflush(buf[4:], w)
+	//| `Tattach w:	packed =  wr_tattach(buf[4:], w)
+	//| `Rattach w:	packed =  wr_rattach(buf[4:], w)
+	//| `Twalk w:	packed =  wr_twalk(buf[4:], w)
+	//| `Rwalk w:	packed =  wr_rwalk(buf[4:], w)
+	//| `Topen w:	packed =  wr_topen(buf[4:], w)
+	//| `Ropen w:	packed =  wr_ropen(buf[4:], w)
+	//| `Tcreate w:	packed =  wr_tcreate(buf[4:], w)
+	//| `Rcreate w:	packed =  wr_rcreate(buf[4:], w)
+	//| `Tread w:	packed =  wr_tread(buf[4:], w)
+	//| `Rread w:	packed =  wr_rread(buf[4:], w)
+	//| `Twrite w:	packed =  wr_twrite(buf[4:], w)
+	//| `Rwrite w:	packed =  wr_rwrite(buf[4:], w)
+	//| `Tstat w:	packed =  wr_tstat(buf[4:], w)
+	//| `Rstat w:	packed =  wr_rstat(buf[4:], w)
+	//| `Tclunk w:	packed =  wr_tclunk(buf[4:], w)
+	//| `Rclunk w:	packed =  wr_rclunk(buf[4:], w)
+	//| `Tremove w:	packed =  wr_tremove(buf[4:], w)
+	//| `Rremove w:	packed =  wr_rremove(buf[4:], w)
+	//| `Twstat w:	packed =  wr_twstat(buf[4:], w)
+	//| `Rwstat w:	packed =  wr_rwstat(buf[4:], w)
+	| _:
+		std.fatal("FAIL! :P\n")
+	;;
+	
+	match packed
+	| `std.None:
+		-> `std.None
+	| `std.Some msgbuf:
+		std.putle32(buf[0:4], msgbuf.len)
+		-> `std.Some buf[:msgbuf.len]
+	;;
+}
+
+const pack_tversion = {buf, msg
+	var off : uint32 = 2 + 4 + 2
+	
+	if buf.len < off
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	std.putle32(buf[2:6], msg.size)
+	std.putle32(buf[6:8], msg.version.len)
+	off += msg.version.len
+	if buf.len < off
+		-> `std.None
+	;;
+	std.slcp(buf[8:off], msg.version)
+	-> `std.Some buf[0:off]
+}
+
+const unpack_tversion = {buf
+	var len : uint32 = 2 + 4 + 2
+	var verlen : uint32
+	
+	if buf.len < len
+		-> `std.None
+	;;
+	verlen = std.getle16(buf[len:len+2])
+	len += verlen
+	if buf.len < len
+		-> `std.None
+	;;
+	-> `std.Some `Tversion [
+		.tag=std.getle16(buf[0:2]),
+		.size=std.getle32(buf[2:6]),
+		.version=buf[6:6+verlen],
+	]
+}
+
