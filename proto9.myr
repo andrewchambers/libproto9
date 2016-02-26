@@ -29,8 +29,8 @@ pkg proto9 =
 	const Qtdir    : uint8   = 0x80
 	
 	type msg = union
-		`Tversion	tversion
-		`Rversion	rversion
+		`Tversion	version
+		`Rversion	version
 		`Tauth	tauth
 		`Rauth	rauth
 		`Rerror	rerror
@@ -78,13 +78,7 @@ pkg proto9 =
 		muid	: byte[:]
 	;;
 
-	type tversion = struct
-		tag	: uint16
-		size	: uint32
-		version	: byte[:]
-	;;
-
-	type rversion = struct
+	type version = struct
 		tag	: uint16
 		size	: uint32
 		version	: byte[:]
@@ -270,6 +264,8 @@ const unpackmsg = {buf
 	match buf[4]
 	| Mt_tversion:
 		-> unpack_tversion(buf[5:])
+	| Mt_rversion:
+		-> unpack_rversion(buf[5:])
 	| _:
 		-> `std.None
 	;;
@@ -283,9 +279,12 @@ const packmsg = {buf, msg
 	;;
 	
 	match msg
-	| `Tversion w:
+	| `Tversion m:
 		buf[4] = Mt_tversion
-		packed = pack_tversion(buf[5:], w)
+		packed = pack_version(buf[5:], m)
+	| `Rversion m:
+		buf[4] = Mt_rversion
+		packed = pack_version(buf[5:], m)
 	| _:
 		std.fatal("FAIL! :P\n")
 	;;
@@ -299,7 +298,7 @@ const packmsg = {buf, msg
 	;;
 }
 
-const pack_tversion = {buf, msg
+const pack_version = {buf, msg
 	var off : uint32 = 2 + 4 + 2
 	
 	if buf.len < off
@@ -316,7 +315,7 @@ const pack_tversion = {buf, msg
 	-> `std.Some buf[0:off]
 }
 
-const unpack_tversion = {buf
+const unpack_version = {buf
 	var len : uint32 = 2 + 4 + 2
 	var verlen : uint32
 	
@@ -328,10 +327,38 @@ const unpack_tversion = {buf
 	if buf.len < len
 		-> `std.None
 	;;
-	-> `std.Some `Tversion [
+	-> `std.Some [
 		.tag=std.getle16(buf[0:2]),
 		.size=std.getle32(buf[2:6]),
 		.version=buf[8:8+verlen],
 	]
 }
+
+
+const pack_tversion = {buf, msg
+	-> pack_version(buf, msg)
+}
+
+const unpack_tversion = {buf
+	match unpack_version(buf)
+	| `std.Some m:
+		-> `std.Some `Tversion m
+	| `std.None:
+		-> `std.None
+	;;
+}
+
+const pack_rversion = {buf, msg
+	-> pack_version(buf, msg)
+}
+
+const unpack_rversion = {buf
+	match unpack_version(buf)
+	| `std.Some m:
+		-> `std.Some `Rversion m
+	| `std.None:
+		-> `std.None
+	;;
+}
+
 
