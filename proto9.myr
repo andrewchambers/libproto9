@@ -235,66 +235,41 @@ pkg proto9 =
 	const packmsg	: (buf : byte[:], m : msg -> std.option(byte[:]))
 ;;
 
-const Mt_tversion	: uint8 = 100
-const Mt_rversion	: uint8 = 101
-const Mt_tauth		: uint8 = 102
-const Mt_rauth		: uint8 = 103
-const Mt_tattach	: uint8 = 104
-const Mt_rattach	: uint8 = 105
-const Mt_rerror		: uint8 = 107
-const Mt_tflush		: uint8 = 108
-const Mt_rflush		: uint8 = 109
-const Mt_twalk 		: uint8 = 110
-const Mt_rwalk		: uint8 = 111
-const Mt_topen		: uint8 = 112
-const Mt_ropen		: uint8 = 113
-const Mt_tcreate	: uint8 = 114
-const Mt_rcreate	: uint8 = 115
-const Mt_tread		: uint8 = 116
-const Mt_rread		: uint8 = 117
-const Mt_twrite		: uint8 = 118
-const Mt_rwrite		: uint8 = 119
-const Mt_tclunk		: uint8 = 120
-const Mt_rclunk		: uint8 = 121
-const Mt_tremove	: uint8 = 122
-const Mt_rremove	: uint8 = 123
-const Mt_tstat		: uint8 = 124
-const Mt_rstat		: uint8 = 125
-const Mt_twstat		: uint8 = 126
-const Mt_rwstat		: uint8 = 127
+const Mt_tversion	: byte = 100
+const Mt_rversion	: byte = 101
+const Mt_tauth		: byte = 102
+const Mt_rauth		: byte = 103
+const Mt_tattach	: byte = 104
+const Mt_rattach	: byte = 105
+const Mt_rerror		: byte = 107
+const Mt_tflush		: byte = 108
+const Mt_rflush		: byte = 109
+const Mt_twalk 		: byte = 110
+const Mt_rwalk		: byte = 111
+const Mt_topen		: byte = 112
+const Mt_ropen		: byte = 113
+const Mt_tcreate	: byte = 114
+const Mt_rcreate	: byte = 115
+const Mt_tread		: byte = 116
+const Mt_rread		: byte = 117
+const Mt_twrite		: byte = 118
+const Mt_rwrite		: byte = 119
+const Mt_tclunk		: byte = 120
+const Mt_rclunk		: byte = 121
+const Mt_tremove	: byte = 122
+const Mt_rremove	: byte = 123
+const Mt_tstat		: byte = 124
+const Mt_rstat		: byte = 125
+const Mt_twstat		: byte = 126
+const Mt_rwstat		: byte = 127
 
 const unpackmsg = {buf
 	if buf.len < 5
 		-> `std.None
 	;;
-	match buf[4] castto(uint8)
-	| Mt_tversion:	-> unpack_tversion(buf)
-	//| Mt_rversion:	-> rd_rversion(buf)
-	//| Mt_tauth:	-> rd_tauth(buf)
-	//| Mt_rauth:	-> rd_rauth(buf)
-	//| Mt_tattach:	-> rd_tattach(buf)
-	//| Mt_rattach:	-> rd_rattach(buf)
-	//| Mt_rerror:	-> rd_rerror(buf)
-	//| Mt_tflush:	-> rd_tflush(buf)
-	//| Mt_rflush:	-> rd_rflush(buf)
-	//| Mt_twalk :	-> rd_twalk(buf)
-	//| Mt_rwalk:	-> rd_rwalk(buf)
-	//| Mt_topen:	-> rd_topen(buf)
-	//| Mt_ropen:	-> rd_ropen(buf)
-	//| Mt_tcreate:	-> rd_tcreate(buf)
-	//| Mt_rcreate:	-> rd_rcreate(buf)
-	//| Mt_tread:	-> rd_tread(buf)
-	//| Mt_rread:	-> rd_rread(buf)
-	//| Mt_twrite:	-> rd_twrite(buf)
-	//| Mt_rwrite:	-> rd_rwrite(buf)
-	//| Mt_tclunk:	-> rd_tclunk(buf)
-	//| Mt_rclunk:	-> rd_rclunk(buf)
-	//| Mt_tremove:	-> rd_tremove(buf)
-	//| Mt_rremove:	-> rd_rremove(buf)
-	//| Mt_tstat:	-> rd_tstat(buf)
-	//| Mt_rstat:	-> rd_rstat(buf)
-	//| Mt_twstat:	-> rd_twstat(buf)
-	//| Mt_rwstat:	-> rd_rwstat(buf)
+	match buf[4]
+	| Mt_tversion:
+		-> unpack_tversion(buf[5:])
 	| _:
 		-> `std.None
 	;;
@@ -308,33 +283,9 @@ const packmsg = {buf, msg
 	;;
 	
 	match msg
-	| `Tversion w:	packed =  pack_tversion(buf[4:], w)
-	//| `Rversion w:	packed =  wr_rversion(buf[4:], w)
-	//| `Tauth w:	packed =  wr_tauth(buf[4:], w)
-	//| `Rauth w:	packed =  wr_rauth(buf[4:], w)
-	//| `Rerror w:	packed =  wr_rerror(buf[4:], w)
-	//| `Tflush w:	packed =  wr_tflush(buf[4:], w)
-	//| `Rflush w:	packed =  wr_rflush(buf[4:], w)
-	//| `Tattach w:	packed =  wr_tattach(buf[4:], w)
-	//| `Rattach w:	packed =  wr_rattach(buf[4:], w)
-	//| `Twalk w:	packed =  wr_twalk(buf[4:], w)
-	//| `Rwalk w:	packed =  wr_rwalk(buf[4:], w)
-	//| `Topen w:	packed =  wr_topen(buf[4:], w)
-	//| `Ropen w:	packed =  wr_ropen(buf[4:], w)
-	//| `Tcreate w:	packed =  wr_tcreate(buf[4:], w)
-	//| `Rcreate w:	packed =  wr_rcreate(buf[4:], w)
-	//| `Tread w:	packed =  wr_tread(buf[4:], w)
-	//| `Rread w:	packed =  wr_rread(buf[4:], w)
-	//| `Twrite w:	packed =  wr_twrite(buf[4:], w)
-	//| `Rwrite w:	packed =  wr_rwrite(buf[4:], w)
-	//| `Tstat w:	packed =  wr_tstat(buf[4:], w)
-	//| `Rstat w:	packed =  wr_rstat(buf[4:], w)
-	//| `Tclunk w:	packed =  wr_tclunk(buf[4:], w)
-	//| `Rclunk w:	packed =  wr_rclunk(buf[4:], w)
-	//| `Tremove w:	packed =  wr_tremove(buf[4:], w)
-	//| `Rremove w:	packed =  wr_rremove(buf[4:], w)
-	//| `Twstat w:	packed =  wr_twstat(buf[4:], w)
-	//| `Rwstat w:	packed =  wr_rwstat(buf[4:], w)
+	| `Tversion w:
+		buf[4] = Mt_tversion
+		packed = pack_tversion(buf[5:], w)
 	| _:
 		std.fatal("FAIL! :P\n")
 	;;
@@ -343,8 +294,8 @@ const packmsg = {buf, msg
 	| `std.None:
 		-> `std.None
 	| `std.Some msgbuf:
-		std.putle32(buf[0:4], msgbuf.len)
-		-> `std.Some buf[:msgbuf.len]
+		std.putle32(buf[0:4], msgbuf.len + 5)
+		-> `std.Some buf[0:5+msgbuf.len]
 	;;
 }
 

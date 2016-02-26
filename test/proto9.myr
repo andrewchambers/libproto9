@@ -1,0 +1,59 @@
+use proto9
+use std
+
+type testcase = struct
+	msg : proto9.msg
+	data : byte[:]
+;;
+
+
+const testpackunpack = {
+	var buf1, buf2, msg, packed, repacked
+	
+	buf1 = std.slalloc(4096)
+	buf2 = std.slalloc(4096)
+
+	var testcases : testcase[:] = [
+		[
+			.msg=`proto9.Tversion [
+				.tag=45,
+				.size=9384,
+				.version="9P2000",
+			],
+			.data=[0x13, 0x0, 0x0, 0x0, 0x64, 0x2d, 0x0, 0xa8, 0x24, 0x0, 0x0, 0x6, 0x0, 0x39, 0x50, 0x32, 0x30, 0x30, 0x30][:]
+		],
+	][:]
+
+	for tc in testcases
+		match proto9.packmsg(buf1, tc.msg)
+		| `std.Some p:
+			packed = p
+		| `std.None:
+			std.fatal("packing {} failed\n", tc.msg)
+		;;
+		if !std.sleq(packed, tc.data)
+			std.fput(std.Err, "packing failed: {}\n", tc.msg)
+			std.fatal("expected {r}\ngot      {r}\n", tc.data, packed)
+		;;
+		match proto9.unpackmsg(packed)
+		| `std.Some m:
+			msg = m
+		| `std.None:
+			std.fatal("reading {r} failed\n", packed)
+		;;
+		match proto9.packmsg(buf2, msg)
+		| `std.Some p:
+			repacked = p
+		| `std.None:
+	 		std.fatal("repacking {} failed\n", tc.msg)
+	 	;;
+		if !std.sleq(repacked, tc.data)
+			std.fatal("repackpack failed:\nexpected {r}\ngot      {r}\n", tc.data, repacked)
+		;;
+	;;
+
+}
+
+const main = {
+	testpackunpack()
+}
