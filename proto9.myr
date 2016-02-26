@@ -57,7 +57,9 @@ pkg proto9 =
 		`Twstat	twstat
 		`Rwstat	rwstat
 	;;
-
+	
+	const qidlen : uint32 = 13
+	
 	type qid = struct
 		ty	: uint8
 		vers	: uint32
@@ -266,6 +268,10 @@ const unpackmsg = {buf
 		-> unpack_tversion(buf[5:])
 	| Mt_rversion:
 		-> unpack_rversion(buf[5:])
+	| Mt_tauth:
+		-> unpack_tauth(buf[5:])
+	| Mt_rauth:
+		-> unpack_rauth(buf[5:])
 	| _:
 		-> `std.None
 	;;
@@ -285,6 +291,12 @@ const packmsg = {buf, msg
 	| `Rversion m:
 		buf[4] = Mt_rversion
 		packed = pack_version(buf[5:], m)
+	| `Tauth m:
+		buf[4] = Mt_tauth
+		packed = pack_tauth(buf[5:], m)
+	| `Rauth m:
+		buf[4] = Mt_rauth
+		packed = pack_rauth(buf[5:], m)
 	| _:
 		std.fatal("FAIL! :P\n")
 	;;
@@ -299,19 +311,18 @@ const packmsg = {buf, msg
 }
 
 const pack_version = {buf, msg
-	var off : uint32 = 2 + 4 + 2
+	var sz : uint32 = 2 + 4 + 2 + msg.version.len
+	var off : uint32
 	
-	if buf.len < off
+	if buf.len < sz
 		-> `std.None
 	;;
 	std.putle16(buf[0:2], msg.tag)
 	std.putle32(buf[2:6], msg.size)
 	std.putle16(buf[6:8], msg.version.len)
+	off = 8
+	std.slcp(buf[off:off+msg.version.len], msg.version)
 	off += msg.version.len
-	if buf.len < off
-		-> `std.None
-	;;
-	std.slcp(buf[8:off], msg.version)
 	-> `std.Some buf[0:off]
 }
 
@@ -333,7 +344,6 @@ const unpack_version = {buf
 		.version=buf[8:8+verlen],
 	]
 }
-
 
 const pack_tversion = {buf, msg
 	-> pack_version(buf, msg)
@@ -360,5 +370,107 @@ const unpack_rversion = {buf
 		-> `std.None
 	;;
 }
+
+const pack_tauth = {buf, msg -> std.option(byte[:])
+	var sz : uint32 = 2 + 4 + 2 + msg.uname.len + msg.aname.len
+	var off : uint32
+	
+	if buf.len < sz
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	std.putle32(buf[2:6], msg.afid)
+	std.putle16(buf[6:8], msg.uname.len)
+	off = 8
+	std.slcp(buf[off:off+msg.uname.len], msg.uname)
+	off += msg.uname.len
+	std.putle16(buf[off:off+2], msg.aname.len)
+	off += 2
+	std.slcp(buf[off:off+msg.aname.len], msg.aname)
+	off += msg.aname.len
+	-> `std.Some buf[0:off]
+}
+
+const unpack_tauth = {buf
+	var off : uint32 = 0
+	var anamelen : uint32
+	var anameoff : uint32
+	var unamelen : uint32
+	var unameoff : uint32
+	
+	off = 6
+	if buf.len < off + 2
+		-> `std.None
+	;;
+	unamelen = std.getle16(buf[off:off+2])
+	off += 2
+	unameoff = off
+	off += unamelen 
+	if buf.len < off + 2
+		-> `std.None
+	;;
+	anamelen = std.getle16(buf[off:off+2])
+	off += 2
+	anameoff = off
+	off += anamelen 
+	
+	-> `std.Some `Tauth [
+		.tag=std.getle16(buf[0:2]),
+		.afid=std.getle32(buf[2:6]),
+		.uname=buf[unameoff:unameoff+unamelen],
+		.aname=buf[anameoff:anameoff+anamelen],
+	]
+}
+
+const pack_qid = {buf, qid : proto9.qid
+	if buf.len < qidlen
+		-> `std.None
+	;;
+	std.putle8(buf[0:1], qid.ty)
+	std.putle32(buf[1:5], qid.vers)
+	std.putle64(buf[5:13], qid.path)
+	-> `std.Some buf[:qidlen]
+}
+
+const pack_rauth = {buf, msg
+	if buf.len < 2
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	match pack_qid(buf[2:], msg.aqid)
+	| `std.Some q:
+		-> `std.Some buf[:2+q.len]
+	| `std.None:
+		-> `std.None
+	;;
+}
+
+const unpack_qid = {buf
+	var qid : proto9.qid
+	
+	if buf.len != qidlen
+		-> `std.None
+	;;
+	qid.ty = std.getle8(buf[0:1])
+	qid.vers = std.getle32(buf[1:5])
+	qid.path = std.getle64(buf[5:13])
+	-> `std.Some qid
+}
+
+const unpack_rauth = {buf
+	if buf.len < 2 + qidlen
+		-> `std.None
+	;;
+	match unpack_qid(buf[2:2+qidlen])
+	| `std.Some qid:
+		-> `std.Some `Rauth [
+			.tag=std.getle16(buf[0:2]),
+			.aqid=qid,
+		]
+	| `std.None:
+		-> `std.None
+	;;
+}
+
 
 
