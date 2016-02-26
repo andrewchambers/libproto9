@@ -272,6 +272,8 @@ const unpackmsg = {buf
 		-> unpack_tauth(buf[5:])
 	| Mt_rauth:
 		-> unpack_rauth(buf[5:])
+	| Mt_rerror:
+		-> unpack_rerror(buf[5:])
 	| _:
 		-> `std.None
 	;;
@@ -297,6 +299,9 @@ const packmsg = {buf, msg
 	| `Rauth m:
 		buf[4] = Mt_rauth
 		packed = pack_rauth(buf[5:], m)
+	| `Rerror m:
+		buf[4] = Mt_rerror
+		packed = pack_rerror(buf[5:], m)
 	| _:
 		std.fatal("FAIL! :P\n")
 	;;
@@ -433,7 +438,7 @@ const pack_qid = {buf, qid : proto9.qid
 }
 
 const pack_rauth = {buf, msg
-	if buf.len < 2
+	if buf.len < 2 + qidlen
 		-> `std.None
 	;;
 	std.putle16(buf[0:2], msg.tag)
@@ -473,4 +478,31 @@ const unpack_rauth = {buf
 }
 
 
+const pack_rerror = {buf, msg
+	var sz : uint32 = 2 + 2 + msg.err.len
+	
+	if buf.len < sz
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	std.putle16(buf[2:4], msg.err.len)
+	std.slcp(buf[4:4+msg.err.len], msg.err)
+	-> `std.Some buf[0:4+msg.err.len]
+}
+
+const unpack_rerror = {buf
+	var errlen : uint32
+	
+	if buf.len < 4
+		-> `std.None
+	;;
+	errlen = std.getle16(buf[2:4])
+	if buf.len < errlen + 4
+		-> `std.None
+	;;
+	-> `std.Some `Rerror [
+		.tag=std.getle16(buf[0:2]),
+		.err=buf[4:4+errlen],
+	]
+}
 
