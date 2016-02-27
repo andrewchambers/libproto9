@@ -271,6 +271,10 @@ const unpackmsg = {buf
 		-> unpack_tauth(buf[5:])
 	| Mt_rauth:
 		-> unpack_rauth(buf[5:])
+	| Mt_tattach:
+		-> unpack_tattach(buf[5:])
+	| Mt_rattach:
+		-> unpack_rattach(buf[5:])
 	| Mt_rerror:
 		-> unpack_rerror(buf[5:])
 	| _:
@@ -298,6 +302,12 @@ const packmsg = {buf, msg
 	| `Rauth m:
 		buf[4] = Mt_rauth
 		packed = pack_rauth(buf[5:], m)
+	| `Tattach m:
+		buf[4] = Mt_tattach
+		packed = pack_tattach(buf[5:], m)
+	| `Rattach m:
+		buf[4] = Mt_rattach
+		packed = pack_rattach(buf[5:], m)
 	| `Rerror m:
 		buf[4] = Mt_rerror
 		packed = pack_rerror(buf[5:], m)
@@ -476,7 +486,6 @@ const unpack_rauth = {buf
 	;;
 }
 
-
 const pack_rerror = {buf, msg
 	var sz : uint32 = 2 + 2 + msg.err.len
 	
@@ -503,5 +512,86 @@ const unpack_rerror = {buf
 		.tag=std.getle16(buf[0:2]),
 		.err=buf[4:4+errlen],
 	]
+}
+
+const pack_tattach = {buf, msg -> std.option(byte[:])
+	var sz : uint32 = 2 + 4 + 4 + 2 + msg.uname.len + msg.aname.len
+	var off : uint32
+	
+	if buf.len < sz
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	std.putle32(buf[2:6], msg.fid)
+	std.putle32(buf[6:10], msg.afid)
+	std.putle16(buf[10:12], msg.uname.len)
+	off = 12
+	std.slcp(buf[off:off+msg.uname.len], msg.uname)
+	off += msg.uname.len
+	std.putle16(buf[off:off+2], msg.aname.len)
+	off += 2
+	std.slcp(buf[off:off+msg.aname.len], msg.aname)
+	off += msg.aname.len
+	-> `std.Some buf[0:off]
+}
+
+const unpack_tattach = {buf
+	var off : uint32 = 0
+	var anamelen : uint32
+	var anameoff : uint32
+	var unamelen : uint32
+	var unameoff : uint32
+	
+	off = 10
+	if buf.len < off + 2
+		-> `std.None
+	;;
+	unamelen = std.getle16(buf[off:off+2])
+	off += 2
+	unameoff = off
+	off += unamelen 
+	if buf.len < off + 2
+		-> `std.None
+	;;
+	anamelen = std.getle16(buf[off:off+2])
+	off += 2
+	anameoff = off
+	off += anamelen 
+	
+	-> `std.Some `Tattach [
+		.tag=std.getle16(buf[0:2]),
+		.fid=std.getle32(buf[2:6]),
+		.afid=std.getle32(buf[6:10]),
+		.uname=buf[unameoff:unameoff+unamelen],
+		.aname=buf[anameoff:anameoff+anamelen],
+	]
+}
+
+const pack_rattach = {buf, msg
+	if buf.len < 2 + qidlen
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	match pack_qid(buf[2:], msg.qid)
+	| `std.Some q:
+		-> `std.Some buf[:2+q.len]
+	| `std.None:
+		-> `std.None
+	;;
+}
+
+const unpack_rattach = {buf
+	if buf.len < 2 + qidlen
+		-> `std.None
+	;;
+	match unpack_qid(buf[2:2+qidlen])
+	| `std.Some qid:
+		-> `std.Some `Rattach [
+			.tag=std.getle16(buf[0:2]),
+			.qid=qid,
+		]
+	| `std.None:
+		-> `std.None
+	;;
 }
 
