@@ -285,6 +285,10 @@ const unpackmsg = {buf
 		-> unpack_twalk(buf[5:])
 	| Mt_rwalk:
 		-> unpack_rwalk(buf[5:])
+	| Mt_topen:
+		-> unpack_topen(buf[5:])
+	| Mt_ropen:
+		-> unpack_ropen(buf[5:])
 	| _:
 		-> `std.None
 	;;
@@ -331,6 +335,12 @@ const packmsg = {buf, msg
 	| `Rwalk m:
 		buf[4] = Mt_rwalk
 		packed = pack_rwalk(buf[5:], m)
+	| `Topen m:
+		buf[4] = Mt_topen
+		packed = pack_topen(buf[5:], m)
+	| `Ropen m:
+		buf[4] = Mt_ropen
+		packed = pack_ropen(buf[5:], m)
 	| _:
 		std.fatal("FAIL! :P\n")
 	;;
@@ -751,4 +761,47 @@ const unpack_rwalk = {buf
 		off += qidlen
 	;;
 	-> `std.Some `Rwalk walk
+}
+
+const pack_topen = {buf, msg
+	if buf.len < 2 + 4 + 1
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	std.putle32(buf[2:6], msg.fid)
+	std.putle8(buf[6:7], msg.mode)
+	-> `std.Some buf[0:7]
+}
+
+
+const unpack_topen = {buf
+	if buf.len < 2 + 4 + 1
+		-> `std.None
+	;;
+	-> `std.Some `Topen [
+		.tag=std.getle16(buf[0:2]),
+		.fid=std.getle32(buf[2:6]),
+		.mode=std.getle8(buf[6:7])
+	]
+}
+
+const pack_ropen = {buf, msg
+	if buf.len < 2 + qidlen + 4
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	std.get(pack_qid(buf[2:2+qidlen], msg.qid))
+	std.putle32(buf[2+qidlen:2+qidlen+4], msg.iounit)
+	-> `std.Some buf[0:2+qidlen+4]
+}
+
+const unpack_ropen = {buf
+	if buf.len < 2 + qidlen + 4
+		-> `std.None
+	;;
+	-> `std.Some `Ropen [
+		.tag=std.getle16(buf[0:2]),
+		.qid=std.get(unpack_qid(buf[2:2+qidlen])),
+		.iounit=std.getle32(buf[2+qidlen:2+qidlen+4])
+	]
 }
