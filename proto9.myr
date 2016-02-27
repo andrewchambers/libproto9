@@ -283,6 +283,8 @@ const unpackmsg = {buf
 		-> unpack_rflush(buf[5:])
 	| Mt_twalk:
 		-> unpack_twalk(buf[5:])
+	| Mt_rwalk:
+		-> unpack_rwalk(buf[5:])
 	| _:
 		-> `std.None
 	;;
@@ -326,6 +328,9 @@ const packmsg = {buf, msg
 	| `Twalk m:
 		buf[4] = Mt_twalk
 		packed = pack_twalk(buf[5:], m)
+	| `Rwalk m:
+		buf[4] = Mt_rwalk
+		packed = pack_rwalk(buf[5:], m)
 	| _:
 		std.fatal("FAIL! :P\n")
 	;;
@@ -704,4 +709,46 @@ const unpack_twalk = {buf
 		off += nlen
 	;;
 	-> `std.Some `Twalk walk
+}
+
+const pack_rwalk = {buf, msg
+	var sz : uint32
+	var off : uint32
+
+	sz = 2 + 2 + qidlen*(msg.nnwqid castto(uint32))
+	if buf.len < sz
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	std.putle16(buf[2:4], msg.nnwqid)
+	off = 4
+	for var i = 0; i < msg.nnwqid; i++
+		std.get(pack_qid(buf[off:off+qidlen], msg.nwqid[i]))
+		off += qidlen
+	;;
+	-> `std.Some buf[:off]
+}
+
+const unpack_rwalk = {buf
+	var off : uint32 = 2 + 2
+	var walk
+
+	if buf.len < off
+		-> `std.None
+	;;
+	walk.tag = std.getle16(buf[0:2])
+	walk.nnwqid = std.getle16(buf[2:4])
+	if walk.nnwqid > 16
+		-> `std.None
+	;;
+	for var i = 0; i < walk.nnwqid; i++
+		match unpack_qid(buf[off:off+qidlen])
+		| `std.Some qid:
+			walk.nwqid[i] = qid
+		| `std.None:
+			-> `std.None
+		;;
+		off += qidlen
+	;;
+	-> `std.Some `Rwalk walk
 }
