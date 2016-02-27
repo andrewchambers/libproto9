@@ -1,5 +1,4 @@
 use std
-use bio
 
 pkg proto9 =
 	
