@@ -427,7 +427,7 @@ const unpack_tauth = {buf
 	]
 }
 
-const pack_qid = {buf, qid : proto9.qid
+const pack_qid = {buf, qid : qid
 	if buf.len < qidlen
 		-> `std.None
 	;;
@@ -451,7 +451,7 @@ const pack_rauth = {buf, msg
 }
 
 const unpack_qid = {buf
-	var qid : proto9.qid
+	var qid : qid
 	
 	if buf.len != qidlen
 		-> `std.None
