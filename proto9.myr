@@ -277,6 +277,12 @@ const unpackmsg = {buf
 		-> unpack_rattach(buf[5:])
 	| Mt_rerror:
 		-> unpack_rerror(buf[5:])
+	| Mt_tflush:
+		-> unpack_tflush(buf[5:])
+	| Mt_rflush:
+		-> unpack_rflush(buf[5:])
+	| Mt_twalk:
+		-> unpack_twalk(buf[5:])
 	| _:
 		-> `std.None
 	;;
@@ -311,6 +317,15 @@ const packmsg = {buf, msg
 	| `Rerror m:
 		buf[4] = Mt_rerror
 		packed = pack_rerror(buf[5:], m)
+	| `Tflush m:
+		buf[4] = Mt_tflush
+		packed = pack_tflush(buf[5:], m)
+	| `Rflush m:
+		buf[4] = Mt_rflush
+		packed = pack_rflush(buf[5:], m)
+	| `Twalk m:
+		buf[4] = Mt_twalk
+		packed = pack_twalk(buf[5:], m)
 	| _:
 		std.fatal("FAIL! :P\n")
 	;;
@@ -595,3 +610,98 @@ const unpack_rattach = {buf
 	;;
 }
 
+const pack_tflush = {buf, msg
+	if buf.len < 2 + 2
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	std.putle16(buf[2:4], msg.oldtag)
+	-> `std.Some buf[0:4]
+}
+
+const unpack_tflush = {buf
+	if buf.len < 2 + 2
+		-> `std.None
+	;;
+	-> `std.Some `Tflush [
+		.tag=std.getle16(buf[0:2]),
+		.oldtag=std.getle16(buf[2:4]),
+	]
+}
+
+const pack_rflush = {buf, msg
+	if buf.len < 2
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	-> `std.Some buf[0:2]
+}
+
+const unpack_rflush = {buf
+	if buf.len < 2
+		-> `std.None
+	;;
+	-> `std.Some `Rflush [
+		.tag=std.getle16(buf[0:2]),
+	]
+}
+
+const pack_twalk = {buf, msg
+	var sz : uint32
+	var off : uint32
+
+	sz = 2 + 4 + 4 + 2 + 2*(msg.nwnames castto(uint32))
+	for var i = 0; i < msg.nwnames; i++
+		sz += msg.wnames[i].len
+	;;
+	if buf.len < sz
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	std.putle32(buf[2:6], msg.fid)
+	std.putle32(buf[6:10], msg.newfid)
+	std.putle16(buf[10:12], msg.nwnames)
+	off = 12
+	for var i = 0; i < msg.nwnames; i++
+		std.putle16(buf[off:off+2], msg.wnames[i].len)
+		off += 2
+		std.slcp(buf[off:off+msg.wnames[i].len], msg.wnames[i])
+		off += msg.wnames[i].len
+	;;
+	-> `std.Some buf[:off]
+}
+
+const unpack_twalk = {buf
+	var off : uint32 = 2 + 4 + 4 + 2
+	var nlen : uint32
+	var walk
+
+	for var i = 0; i < 16; i++
+		walk.wnames[i] = ""
+	;;
+
+	if buf.len < off
+		-> `std.None
+	;;
+
+	walk.tag = std.getle16(buf[0:2])
+	walk.fid = std.getle32(buf[2:6])
+	walk.newfid = std.getle32(buf[6:10])
+	walk.nwnames = std.getle16(buf[10:12])
+	if walk.nwnames > 16
+		-> `std.None
+	;;
+	for var i = 0; i < walk.nwnames; i++
+		if buf.len < off + 2
+			-> `std.None
+		;;
+		nlen = std.getle16(buf[off:off+2])
+		off += 2
+		if buf.len < off + nlen
+			-> `std.None
+		;;
+		walk.wnames[i] = buf[off:off+nlen]
+		off += nlen
+	;;
+	-> `std.Some `Twalk walk
+}
