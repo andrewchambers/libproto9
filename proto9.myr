@@ -289,6 +289,10 @@ const unpackmsg = {buf
 		-> unpack_topen(buf[5:])
 	| Mt_ropen:
 		-> unpack_ropen(buf[5:])
+	| Mt_tcreate:
+		-> unpack_tcreate(buf[5:])
+	| Mt_rcreate:
+		-> unpack_rcreate(buf[5:])
 	| _:
 		-> `std.None
 	;;
@@ -341,6 +345,12 @@ const packmsg = {buf, msg
 	| `Ropen m:
 		buf[4] = Mt_ropen
 		packed = pack_ropen(buf[5:], m)
+	| `Tcreate m:
+		buf[4] = Mt_tcreate
+		packed = pack_tcreate(buf[5:], m)
+	| `Rcreate m:
+		buf[4] = Mt_rcreate
+		packed = pack_rcreate(buf[5:], m)
 	| _:
 		std.fatal("FAIL! :P\n")
 	;;
@@ -773,7 +783,6 @@ const pack_topen = {buf, msg
 	-> `std.Some buf[0:7]
 }
 
-
 const unpack_topen = {buf
 	if buf.len < 2 + 4 + 1
 		-> `std.None
@@ -800,6 +809,74 @@ const unpack_ropen = {buf
 		-> `std.None
 	;;
 	-> `std.Some `Ropen [
+		.tag=std.getle16(buf[0:2]),
+		.qid=std.get(unpack_qid(buf[2:2+qidlen])),
+		.iounit=std.getle32(buf[2+qidlen:2+qidlen+4])
+	]
+}
+
+const pack_tcreate = {buf, msg
+	var off : uint32
+
+	if buf.len < 2 + 4 + 2 + msg.name.len + 4 + 1
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	std.putle32(buf[2:6], msg.fid)
+	std.putle16(buf[6:8], msg.name.len)
+	std.slcp(buf[8:8+msg.name.len], msg.name)
+	off = 8 + msg.name.len
+	std.putle32(buf[off:off+4], msg.perm)
+	off += 4
+	std.putle8(buf[off:off+1], msg.mode)
+	off += 1
+	-> `std.Some buf[0:off]
+}
+
+const unpack_tcreate= {buf
+	var off : uint32
+	var namelen : uint32
+	var name
+
+	if buf.len < 2 + 4 + 2
+		-> `std.None
+	;;
+
+	namelen = std.getle16(buf[6:8])
+	off = 8
+	if buf.len < off+namelen
+		-> `std.None
+	;;
+	name = buf[off:off+namelen]
+	off += namelen
+	if buf.len < off + 5
+		-> `std.None
+	;;
+
+	-> `std.Some `Tcreate [
+		.tag=std.getle16(buf[0:2]),
+		.fid=std.getle32(buf[2:6]),
+		.name=name,
+		.perm=std.getle32(buf[off:off+4]),
+		.mode=std.getle8(buf[off+4:off+5]),
+	]
+}
+
+const pack_rcreate = {buf, msg
+	if buf.len < 2 + qidlen + 4
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	std.get(pack_qid(buf[2:2+qidlen], msg.qid))
+	std.putle32(buf[2+qidlen:2+qidlen+4], msg.iounit)
+	-> `std.Some buf[0:2+qidlen+4]
+}
+
+const unpack_rcreate = {buf
+	if buf.len < 2 + qidlen + 4
+		-> `std.None
+	;;
+	-> `std.Some `Rcreate [
 		.tag=std.getle16(buf[0:2]),
 		.qid=std.get(unpack_qid(buf[2:2+qidlen])),
 		.iounit=std.getle32(buf[2+qidlen:2+qidlen+4])

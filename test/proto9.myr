@@ -157,17 +157,36 @@ const testmsg = {
 			],
 			.data=[0x18, 0x0, 0x0, 0x0, 0x71, 0x2d, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xcb, 0xd4, 0x12, 0x0][:]
 		],
+		[
+			.msg=`proto9.Tcreate [
+				.tag=45,
+				.fid=12343,
+				.name="wakakaaka",
+				.perm=proto9.Dmdir,
+				.mode=4,
+			],
+			.data=[0x1b, 0x0, 0x0, 0x0, 0x72, 0x2d, 0x0, 0x37, 0x30, 0x0, 0x0, 0x9, 0x0, 0x77, 0x61, 0x6b, 0x61, 0x6b, 0x61, 0x61, 0x6b, 0x61, 0x0, 0x0, 0x0, 0x80, 0x4][:]
+		],
+		[
+			.msg=`proto9.Rcreate [
+				.tag=45,
+				.qid=[.ty=0, .vers=0, .path=0],
+				.iounit=1234123,
+			],
+			.data=[0x18, 0x0, 0x0, 0x0, 0x73, 0x2d, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xcb, 0xd4, 0x12, 0x0][:]
+		],
 	][:]
 
 	for tc in testcases
+		std.put("testing: {}\n", tc.msg)
 		match proto9.packmsg(buf1, tc.msg)
 		| `std.Some p:
 			packed = p
 		| `std.None:
-			std.fatal("packing {} failed\n", tc.msg)
+			std.fatal("packing failed\n")
 		;;
 		if !std.sleq(packed, tc.data)
-			std.fput(std.Err, "packing failed: {}\n", tc.msg)
+			std.fput(std.Err, "packing failed:\n")
 			std.fatal("expected {r}\ngot      {r}\n", tc.data, packed)
 		;;
 		match proto9.unpackmsg(packed)
@@ -180,10 +199,10 @@ const testmsg = {
 		| `std.Some p:
 			repacked = p
 		| `std.None:
-	 		std.fatal("repacking {} failed\n", tc.msg)
+	 		std.fatal("repacking failed\n")
 	 	;;
 		if !std.sleq(repacked, tc.data)
-			std.fatal("repacking {} failed:\nexpected {r}\ngot      {r}\n", tc.msg, tc.data, repacked)
+			std.fatal("repacking failed:\nexpected {r}\ngot {r}\n", tc.data, repacked)
 		;;
 	;;
 
