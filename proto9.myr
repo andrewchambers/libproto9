@@ -297,6 +297,10 @@ const unpackmsg = {buf
 		-> unpack_tread(buf[5:])
 	| Mt_rread:
 		-> unpack_rread(buf[5:])
+	| Mt_twrite:
+		-> unpack_twrite(buf[5:])
+	| Mt_rwrite:
+		-> unpack_rwrite(buf[5:])
 	| _:
 		-> `std.None
 	;;
@@ -361,6 +365,12 @@ const packmsg = {buf, msg
 	| `Rread m:
 		buf[4] = Mt_rread
 		packed = pack_rread(buf[5:], m)
+	| `Twrite m:
+		buf[4] = Mt_twrite
+		packed = pack_twrite(buf[5:], m)
+	| `Rwrite m:
+		buf[4] = Mt_rwrite
+		packed = pack_rwrite(buf[5:], m)	
 	| _:
 		std.fatal("FAIL! :P\n")
 	;;
@@ -936,5 +946,57 @@ const unpack_rread = {buf
 	-> `std.Some `Rread [
 		.tag = std.getle16(buf[0:2]),
 		.data = buf[6:6+datalen]
+	]
+}
+
+const pack_twrite = {buf, msg
+	if buf.len < 2 + 4 + 8 + 4 + msg.data.len
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	std.putle32(buf[2:6], msg.fid)
+	std.putle64(buf[6:14], msg.off)
+	std.putle32(buf[14:18], msg.data.len)
+	std.slcp(buf[18:18+msg.data.len], msg.data)
+	-> `std.Some buf[:18+msg.data.len]
+}
+
+const unpack_twrite = {buf
+	var count : uint32
+	if buf.len < 2 + 4 + 8 + 4
+		-> `std.None
+	;;
+	
+	count = std.getle32(buf[14:18])
+	if buf.len < 18+count
+		-> `std.None
+	;;
+	
+	-> `std.Some `Twrite [
+		.tag = std.getle16(buf[0:2]),
+		.fid = std.getle32(buf[2:6]),
+		.off = std.getle64(buf[6:14]),
+		.data = buf[18:18+count],
+	]
+}
+
+const pack_rwrite = {buf, msg
+	if buf.len < 2 + 4
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	std.putle32(buf[2:6], msg.count)
+	-> `std.Some buf[0:6]
+}
+
+const unpack_rwrite = {buf
+	var datalen : uint32
+
+	if buf.len < 2 + 4
+		-> `std.None
+	;;
+	-> `std.Some `Rwrite [
+		.tag = std.getle16(buf[0:2]),
+		.count = std.getle32(buf[2:6])
 	]
 }
