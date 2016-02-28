@@ -309,6 +309,8 @@ const unpackmsg = {buf
 		-> unpack_tremove(buf[5:])
 	| Mt_rremove:
 		-> unpack_rremove(buf[5:])
+	| Mt_tstat:
+		-> unpack_tstat(buf[5:])
 	| _:
 		-> `std.None
 	;;
@@ -384,13 +386,16 @@ const packmsg = {buf, msg
 		packed = pack_tclunk(buf[5:], m)
 	| `Rclunk m:
 		buf[4] = Mt_rclunk
-		packed = pack_rclunk(buf[5:], m)	
+		packed = pack_rclunk(buf[5:], m)
 	| `Tremove m:
 		buf[4] = Mt_tremove
 		packed = pack_tremove(buf[5:], m)
 	| `Rremove m:
 		buf[4] = Mt_rremove
-		packed = pack_rremove(buf[5:], m)	
+		packed = pack_rremove(buf[5:], m)
+	| `Tstat m:
+		buf[4] = Mt_tstat
+		packed = pack_tstat(buf[5:], m)
 	| _:
 		std.fatal("FAIL! :P\n")
 	;;
@@ -1090,5 +1095,24 @@ const unpack_rremove = {buf
 	;;
 	-> `std.Some `Rremove [
 		.tag=std.getle16(buf[0:2]),
+	]
+}
+
+const pack_tstat = {buf, msg
+	if buf.len < 2 + 4
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	std.putle32(buf[2:6], msg.fid)
+	-> `std.Some buf[0:6]
+}
+
+const unpack_tstat = {buf
+	if buf.len < 2 + 4
+		-> `std.None
+	;;
+	-> `std.Some `Tstat [
+		.tag=std.getle16(buf[0:2]),
+		.fid=std.getle32(buf[2:6]),
 	]
 }
