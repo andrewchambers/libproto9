@@ -1,1 +1,6 @@
 lib proto9 = proto9.myr ;;
+
+bin ramfs {noinst} =
+	ramfs.myr
+	lib ./:proto9
+;;

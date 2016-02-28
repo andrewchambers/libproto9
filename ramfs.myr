@@ -1,0 +1,186 @@
+use std
+use bio
+use proto9
+
+type contents = union
+	`Ramfile byte[:]
+	`Ramdir ramnode#[:]
+;;
+
+type ramnode = struct
+	stat : proto9.stat
+	data : contents
+;;
+
+
+const Ebadfid = "bad fid"
+
+var fids : std.htab(uint32, ramnode#)#
+var root : ramnode#
+var curpath : uint64 = 0
+
+var rarr : byte[4096]
+var warr : byte[4096]
+var rbuf : byte[:]
+var wbuf : byte[:]
+var inf
+
+const readmsg = {
+	match bio.getle32(inf)
+	| `bio.Ok sz:
+		match bio.read(inf, rbuf[:sz-4])
+		| `bio.Ok msgbuf:
+			-> std.get(proto9.unpackmsg(msgbuf))
+		| _:
+			std.fatal("could not read msg contents\n")
+		;;
+	| _:
+		std.fatal("could not read size\n")
+	;;
+}
+
+const writemsg = {m
+	-> std.get(proto9.packmsg(wbuf, m))
+}
+
+const rversion = {t
+	var maxsz
+	
+	maxsz = std.min(rarr.len, t.size)
+	rbuf = rarr[:maxsz]
+	wbuf = warr[:maxsz]
+	if !std.sleq(t.version, "9P2000")
+		-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unknown version"])
+	;;
+	
+	root = std.mk([
+		.stat=[
+			.qid=[.path=curpath++, .ty=proto9.Qtdir, .vers=0],
+			.mode=proto9.Dmdir|0o777,
+			.ty=0,
+			.dev=0,
+			.name="/",
+			.atime=0,
+			.mtime=0,
+			.len=0,
+		],
+		.data=`Ramdir [][:],
+	])
+	-> writemsg(`proto9.Rversion [.tag=t.tag, .size=maxsz, .version="9P2000"])
+}
+
+const rauth = {t
+	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="auth not needed"])
+}
+
+const rflush = {t
+	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented"])
+}
+
+const rattach = {t
+	if t.uname.len == 0
+		root.stat.uid = std.sldup("none")
+		root.stat.gid = std.sldup("none")
+		root.stat.muid = std.sldup("none")
+	else
+		root.stat.uid = std.sldup(t.uname)
+		root.stat.gid = std.sldup(t.uname)
+		root.stat.muid = std.sldup(t.uname)
+	;;
+	if t.fid == proto9.NoFid || std.hthas(fids, t.fid)
+		-> writemsg(`proto9.Rerror [.tag=t.tag, .err=Ebadfid])
+	;;
+	std.htput(fids, t.fid, root)
+	-> writemsg(`proto9.Rattach [.tag=t.tag, .qid=root.stat.qid])
+}
+
+const ropen = {t
+	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented"])
+}
+
+const rcreate = {t
+	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented"])
+}
+
+const rread = {t
+	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented"])
+}
+
+const rwrite = {t
+	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented"])
+}
+
+const rclunk = {t
+	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented"])
+}
+
+const rremove = {t
+	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented"])
+}
+
+const rwalk = {t
+	var curf, r
+	
+	match std.htget(fids, t.fid)
+	| `std.Some f:
+		curf = f
+	| `std.None:
+		-> writemsg(`proto9.Rerror [.tag=t.tag, .err=Ebadfid])
+	;;
+	std.fput(std.Err, "Walk:\n")
+	r.tag = t.tag
+	r.nnwqid = t.nwnames
+	for var i = 0; i < t.nwnames; i++
+		std.fput(std.Err, "\t{}\n", t.wnames[i])
+		-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented walk"])
+	;;
+	std.htput(fids, t.newfid, curf)
+	-> writemsg(`proto9.Rwalk r)
+}
+
+const rstat = {t
+	-> writemsg(`proto9.Rstat [
+		.tag=t.tag,
+		.stat=root.stat
+	])
+}
+
+const rwstat = {t
+	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented"])
+}
+
+const main = {
+	var msg, r
+	
+	fids = std.mkht({x; -> x}, {x, y; -> x == y})
+	rbuf = rarr[:]
+	wbuf = warr[:]
+	inf = bio.mkfile(std.In, bio.Rd)
+	
+	while true
+		msg = readmsg()
+		/* std.fput(std.Err, "msg: {}\n", msg) */
+		match msg
+		| `proto9.Tversion t: r = rversion(t)
+		| `proto9.Tauth t: r = rauth(t)
+		| `proto9.Tflush t: r = rflush(t)
+		| `proto9.Tattach t: r = rattach(t)
+		| `proto9.Twalk t: r = rwalk(t)
+		| `proto9.Topen t: r = ropen(t)
+		| `proto9.Tcreate t: r = rcreate(t)
+		| `proto9.Tread t: r = rread(t)
+		| `proto9.Twrite t: r = rwrite(t)
+		| `proto9.Tstat t: r = rstat(t)
+		| `proto9.Tclunk t: r = rclunk(t)
+		| `proto9.Tremove t: r = rremove(t)
+		| `proto9.Twstat t: r = rwstat(t)
+		| _:
+			continue
+		;;
+		match std.writeall(std.Out, r)
+		| (_, `std.None):
+		| _:
+			std.fatal("writing response failed\n")
+		;;
+	;;
+}
