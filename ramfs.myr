@@ -28,9 +28,10 @@ var inf
 const readmsg = {
 	match bio.getle32(inf)
 	| `bio.Ok sz:
-		match bio.read(inf, rbuf[:sz-4])
-		| `bio.Ok msgbuf:
-			-> std.get(proto9.unpackmsg(msgbuf))
+		std.putle32(rbuf[0:4], sz)
+		match bio.read(inf, rbuf[4:sz])
+		| `bio.Ok mbuf:
+			-> std.get(proto9.unpackmsg(rbuf[:sz]))
 		| _:
 			std.fatal("could not read msg contents\n")
 		;;
