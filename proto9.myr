@@ -1122,7 +1122,7 @@ const unpack_tstat = {buf
 	]
 }
 
-const pack_stat = {buf, s
+const pack_stat = {buf, s : proto9.stat
 	var sz : uint32
 	var off : uint32
 
@@ -1132,47 +1132,132 @@ const pack_stat = {buf, s
 	if buf.len < sz
 		-> `std.None
 	;;
-	std.putle16(b[0:2], uint16(l-2))
-	std.putle16(b[2:4], s.Type)
-	std.putle32(b[4:8], s.Dev)
+	std.putle16(buf[0:2], sz-2)
+	std.putle16(buf[2:4], s.ty)
+	std.putle32(buf[4:8], s.dev)
 
-	std.get(pack_qid(buf[8:21]), s.qid)
-	std.putle32(b[21:25], s.mode)
-	std.putle32(b[25:29], s.atime)
-	std.putle32(b[29:33], s.mtime)
-	std.putle64(b[33:41], s.length)
+	std.get(pack_qid(buf[8:21], s.qid))
+	std.putle32(buf[21:25], s.mode)
+	std.putle32(buf[25:29], s.atime)
+	std.putle32(buf[29:33], s.mtime)
+	std.putle64(buf[33:41], s.len)
 
 	off = 41
-	std.putle16(b[off:off+2], s.name.len)
+	std.putle16(buf[off:off+2], s.name.len)
 	off += 2
-	std.slcp(b[off:off+s.name.len], s.name)
+	std.slcp(buf[off:off+s.name.len], s.name)
 	off += s.name.len
 
-	std.putle16(b[off:off+2], s.uid)
+	std.putle16(buf[off:off+2], s.uid.len)
 	off += 2
-	std.slcp(b[off:off+s.uid.len], s.uid)
+	std.slcp(buf[off:off+s.uid.len], s.uid)
 	off += s.uid.len
 
-	std.putle16(b[off:off+2], s.gid)
+	std.putle16(buf[off:off+2], s.gid.len)
 	off += 2
-	std.slcp(b[off:off+s.gid.len], s.gid)
+	std.slcp(buf[off:off+s.gid.len], s.gid)
 	off += s.gid.len
 
-	std.putle16(b[off:off+2], s.muid.len)
+	std.putle16(buf[off:off+2], s.muid.len)
 	off += 2
-	std.slcp(b[off:off+muid.len], s.muid)
-	off += muid.len
+	std.slcp(buf[off:off+s.uid.len], s.muid)
+	off += s.muid.len
 	-> `std.Some buf[:off]
 }
 
 const pack_rstat = {buf, msg
-	-> `std.None
+	if buf.len < 4
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	match pack_stat(buf[4:], msg.stat)
+	| `std.Some s:
+		std.putle16(buf[2:4], s.len)
+		-> `std.Some buf[0:4+s.len]
+	| `std.None:
+		-> `std.None
+	;;
 }
 
 const unpack_stat = {buf
-	-> `std.Some buf
+	var s : stat
+	var off : uint32
+	var namelen : uint32
+	var uidlen : uint32
+	var gidlen : uint32
+	var muidlen : uint32
+
+	off = 2 + 2 + 4 + qidlen + 4 + 4 + 4 + 8
+	if buf.len < off
+		-> `std.None
+	;;
+
+	s.ty = std.getle16(buf[2:4])
+	s.dev = std.getle32(buf[4:8])
+	s.qid = std.get(unpack_qid(buf[8:21]))
+	s.mode = std.getle32(buf[21:25])
+	s.atime = std.getle32(buf[25:29])
+	s.mtime = std.getle32(buf[29:33])
+	s.len = std.getle64(buf[33:41])
+
+	if buf.len < off + 2
+		-> `std.None
+	;;
+	namelen = std.getle16(buf[off:off+2])
+	off += 2
+	if buf.len < off + namelen
+		-> `std.None
+	;;
+	s.name = buf[off:off+namelen]
+	off += namelen
+
+	if buf.len < off + 2
+		-> `std.None
+	;;
+	uidlen = std.getle16(buf[off:off+2])
+	off += 2
+	if buf.len < off + uidlen
+		-> `std.None
+	;;
+	s.uid = buf[off:off+uidlen]
+	off += uidlen
+
+	if buf.len < off + 2
+		-> `std.None
+	;;
+	gidlen = std.getle16(buf[off:off+2])
+	off += 2
+	if buf.len < off + gidlen
+		-> `std.None
+	;;
+	s.gid = buf[off:off+gidlen]
+	off += gidlen
+
+	if buf.len < off + 2
+		-> `std.None
+	;;
+	muidlen = std.getle16(buf[off:off+2])
+	off += 2
+	if buf.len < off + muidlen
+		-> `std.None
+	;;
+	s.muid = buf[off:off+muidlen]
+	off += muidlen
+	-> `std.Some s
+
 }
 
 const unpack_rstat = {buf
-	-> `std.None
+	if buf.len < 4
+		-> `std.None
+	;;
+	match unpack_stat(buf[4:])
+	| `std.Some s:
+		-> `std.Some `Rstat [
+			.tag=std.getle16(buf[0:2]),
+			.stat=s,
+		]
+	| `std.None:
+		-> `std.None
+	;;
 }
