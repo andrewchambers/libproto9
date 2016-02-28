@@ -2,16 +2,12 @@ use std
 use bio
 use proto9
 
-type contents = union
-	`Ramfile byte[:]
-	`Ramdir ramnode#[:]
-;;
-
 type ramnode = struct
+	parent : std.option(ramnode#)
+	children : std.option(ramnode#[:])
 	stat : proto9.stat
-	data : contents
+	data : byte[:]
 ;;
-
 
 const Ebadfid = "bad fid"
 
@@ -55,6 +51,8 @@ const rversion = {t
 	;;
 	
 	root = std.mk([
+		.parent = `std.None,
+		.children = `std.Some [][:],
 		.stat=[
 			.qid=[.path=curpath++, .ty=proto9.Qtdir, .vers=0],
 			.mode=proto9.Dmdir|0o777,
@@ -65,7 +63,7 @@ const rversion = {t
 			.mtime=0,
 			.len=0,
 		],
-		.data=`Ramdir [][:],
+		.data=[][:],
 	])
 	-> writemsg(`proto9.Rversion [.tag=t.tag, .size=maxsz, .version="9P2000"])
 }
@@ -104,7 +102,20 @@ const rcreate = {t
 }
 
 const rread = {t
-	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented"])
+	var fid, data
+
+	match std.htget(fids, t.fid)
+	| `std.Some f:
+		fid = f
+	| `std.None:
+		-> writemsg(`proto9.Rerror [.tag=t.tag, .err=Ebadfid])
+	;;
+	if t.off > fid.data.len
+		/* XXX: correct? */
+		t.off = fid.data.len
+	;;
+	data = fid.data[t.off:std.min(t.off+(t.count castto(uint64)), fid.data.len)]
+	-> writemsg(`proto9.Rread [.tag=t.tag, .data=data])
 }
 
 const rwrite = {t
@@ -185,3 +196,4 @@ const main = {
 		;;
 	;;
 }
+
