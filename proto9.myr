@@ -894,25 +894,25 @@ const unpack_rcreate = {buf
 }
 
 const pack_tread = {buf, msg
-	if buf.len < 2 + 4 + 8 + 2
+	if buf.len < 2 + 4 + 8 + 4
 		-> `std.None
 	;;
 	std.putle16(buf[0:2], msg.tag)
 	std.putle32(buf[2:6], msg.fid)
 	std.putle64(buf[6:14], msg.off)
-	std.putle16(buf[14:16], msg.count)
-	-> `std.Some buf[:16]
+	std.putle32(buf[14:18], msg.count)
+	-> `std.Some buf[:18]
 }
 
 const unpack_tread = {buf
-	if buf.len < 2 + 4 + 8 + 2
+	if buf.len < 2 + 4 + 8 + 4
 		-> `std.None
 	;;
 	-> `std.Some `Tread [
 		.tag = std.getle16(buf[0:2]),
 		.fid = std.getle32(buf[2:6]),
 		.off = std.getle64(buf[6:14]),
-		.count = std.getle16(buf[14:16]),
+		.count = std.getle32(buf[14:18]),
 	]
 }
 
