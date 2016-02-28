@@ -301,6 +301,14 @@ const unpackmsg = {buf
 		-> unpack_twrite(buf[5:])
 	| Mt_rwrite:
 		-> unpack_rwrite(buf[5:])
+	| Mt_tclunk:
+		-> unpack_tclunk(buf[5:])
+	| Mt_rclunk:
+		-> unpack_rclunk(buf[5:])
+	| Mt_tremove:
+		-> unpack_tremove(buf[5:])
+	| Mt_rremove:
+		-> unpack_rremove(buf[5:])
 	| _:
 		-> `std.None
 	;;
@@ -370,7 +378,19 @@ const packmsg = {buf, msg
 		packed = pack_twrite(buf[5:], m)
 	| `Rwrite m:
 		buf[4] = Mt_rwrite
-		packed = pack_rwrite(buf[5:], m)	
+		packed = pack_rwrite(buf[5:], m)
+	| `Tclunk m:
+		buf[4] = Mt_tclunk
+		packed = pack_tclunk(buf[5:], m)
+	| `Rclunk m:
+		buf[4] = Mt_rclunk
+		packed = pack_rclunk(buf[5:], m)	
+	| `Tremove m:
+		buf[4] = Mt_tremove
+		packed = pack_tremove(buf[5:], m)
+	| `Rremove m:
+		buf[4] = Mt_rremove
+		packed = pack_rremove(buf[5:], m)	
 	| _:
 		std.fatal("FAIL! :P\n")
 	;;
@@ -998,5 +1018,77 @@ const unpack_rwrite = {buf
 	-> `std.Some `Rwrite [
 		.tag = std.getle16(buf[0:2]),
 		.count = std.getle32(buf[2:6])
+	]
+}
+
+const pack_tclunk = {buf, msg
+	if buf.len < 2 + 4
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	std.putle32(buf[2:6], msg.fid)
+	-> `std.Some buf[0:6]
+}
+
+const unpack_tclunk = {buf
+	if buf.len < 2 + 4 
+		-> `std.None
+	;;
+	-> `std.Some `Tclunk [
+		.tag=std.getle16(buf[0:2]),
+		.fid=std.getle32(buf[2:6]),
+	]
+}
+
+const pack_rclunk = {buf, msg
+	if buf.len < 2
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	-> `std.Some buf[0:2]
+}
+
+const unpack_rclunk = {buf
+	if buf.len < 2
+		-> `std.None
+	;;
+	-> `std.Some `Rclunk [
+		.tag=std.getle16(buf[0:2]),
+	]
+}
+
+const pack_tremove = {buf, msg
+	if buf.len < 2 + 4
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	std.putle32(buf[2:6], msg.fid)
+	-> `std.Some buf[0:6]
+}
+
+const unpack_tremove = {buf
+	if buf.len < 2 + 4
+		-> `std.None
+	;;
+	-> `std.Some `Tremove [
+		.tag=std.getle16(buf[0:2]),
+		.fid=std.getle32(buf[2:6]),
+	]
+}
+
+const pack_rremove = {buf, msg
+	if buf.len < 2
+		-> `std.None
+	;;
+	std.putle16(buf[0:2], msg.tag)
+	-> `std.Some buf[0:2]
+}
+
+const unpack_rremove = {buf
+	if buf.len < 2
+		-> `std.None
+	;;
+	-> `std.Some `Rremove [
+		.tag=std.getle16(buf[0:2]),
 	]
 }
