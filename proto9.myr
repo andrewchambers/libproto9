@@ -733,7 +733,7 @@ const pack_twalk = {buf, msg
 	var sz : uint32
 	var off : uint32
 
-	sz = 2 + 4 + 4 + 2 + 2*(msg.nwnames castto(uint32))
+	sz = 2 + 4 + 4 + 2 + 2*(msg.nwnames : uint32)
 	for var i = 0; i < msg.nwnames; i++
 		sz += msg.wnames[i].len
 	;;
@@ -793,7 +793,7 @@ const pack_rwalk = {buf, msg
 	var sz : uint32
 	var off : uint32
 
-	sz = 2 + 2 + qidlen*(msg.nnwqid castto(uint32))
+	sz = 2 + 2 + qidlen*(msg.nnwqid : uint32)
 	if buf.len < sz
 		-> `std.None
 	;;
