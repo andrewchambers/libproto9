@@ -21,13 +21,14 @@ var rbuf : byte[:]
 var wbuf : byte[:]
 var inf
 
-const readmsg = {
+const readmsg = {msg
+
 	match bio.getle32(inf)
 	| `bio.Ok sz:
 		std.putle32(rbuf[0:4], sz)
 		match bio.read(inf, rbuf[4:sz])
 		| `bio.Ok mbuf:
-			-> std.get(proto9.unpackmsg(rbuf[:sz]))
+			proto9.unpackmsg(msg, rbuf[:sz])
 		| _:
 			std.fatal("could not read msg contents\n")
 		;;
@@ -37,17 +38,18 @@ const readmsg = {
 }
 
 const writemsg = {m
-	-> std.get(proto9.packmsg(wbuf, m))
+	-> proto9.packmsg(m, wbuf)
 }
 
 const rversion = {t
 	var maxsz
 	
-	maxsz = std.min(rarr.len, t.size)
+	maxsz = std.min(rarr.len, t.msize)
 	rbuf = rarr[:maxsz]
 	wbuf = warr[:maxsz]
 	if !std.sleq(t.version, "9P2000")
-		-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unknown version"])
+		writemsg(&(`proto9.Rerror [.tag=t.tag, .err="unknown version"]))
+		-> wbuf
 	;;
 	
 	root = std.mk([
@@ -65,15 +67,18 @@ const rversion = {t
 		],
 		.data=[][:],
 	])
-	-> writemsg(`proto9.Rversion [.tag=t.tag, .size=maxsz, .version="9P2000"])
+	writemsg(&(`proto9.Rversion [.tag=t.tag, .msize=maxsz, .version="9P2000"]))
+	-> wbuf
 }
 
 const rauth = {t
-	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="auth not needed"])
+	writemsg(&(`proto9.Rerror [.tag=t.tag, .err="auth not needed"]))
+	-> wbuf
 }
 
 const rflush = {t
-	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented"])
+	writemsg(&(`proto9.Rerror [.tag=t.tag, .err="unimplemented"]))
+	-> wbuf
 }
 
 const rattach = {t
@@ -86,19 +91,23 @@ const rattach = {t
 		root.stat.gid = std.sldup(t.uname)
 		root.stat.muid = std.sldup(t.uname)
 	;;
-	if t.fid == proto9.NoFid || std.hthas(fids, t.fid)
-		-> writemsg(`proto9.Rerror [.tag=t.tag, .err=Ebadfid])
+	if t.fid == proto9.Nofid || std.hthas(fids, t.fid)
+		writemsg(&(`proto9.Rerror [.tag=t.tag, .err=Ebadfid]))
+	-> wbuf
 	;;
 	std.htput(fids, t.fid, root)
-	-> writemsg(`proto9.Rattach [.tag=t.tag, .qid=root.stat.qid])
+	writemsg(&(`proto9.Rattach [.tag=t.tag, .qid=root.stat.qid]))
+	-> wbuf
 }
 
 const ropen = {t
-	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented"])
+	writemsg(&(`proto9.Rerror [.tag=t.tag, .err="unimplemented"]))
+	-> wbuf
 }
 
 const rcreate = {t
-	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented"])
+	writemsg(&(`proto9.Rerror [.tag=t.tag, .err="unimplemented"]))
+	-> wbuf
 }
 
 const rread = {t
@@ -108,26 +117,31 @@ const rread = {t
 	| `std.Some f:
 		fid = f
 	| `std.None:
-		-> writemsg(`proto9.Rerror [.tag=t.tag, .err=Ebadfid])
+		writemsg(&(`proto9.Rerror [.tag=t.tag, .err=Ebadfid]))
+	-> wbuf
 	;;
 	if t.off > fid.data.len
 		/* XXX: correct? */
 		t.off = fid.data.len
 	;;
-	data = fid.data[t.off:std.min(t.off+(t.count castto(uint64)), fid.data.len)]
-	-> writemsg(`proto9.Rread [.tag=t.tag, .data=data])
+	data = fid.data[t.off:std.min(t.off+(t.count : uint64), fid.data.len)]
+	writemsg(&(`proto9.Rread [.tag=t.tag, .data=data]))
+	-> wbuf
 }
 
 const rwrite = {t
-	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented"])
+	writemsg(&(`proto9.Rerror [.tag=t.tag, .err="unimplemented"]))
+	-> wbuf
 }
 
 const rclunk = {t
-	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented"])
+	writemsg(&(`proto9.Rerror [.tag=t.tag, .err="unimplemented"]))
+	-> wbuf
 }
 
 const rremove = {t
-	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented"])
+	writemsg(&(`proto9.Rerror [.tag=t.tag, .err="unimplemented"]))
+	-> wbuf
 }
 
 const rwalk = {t
@@ -137,28 +151,33 @@ const rwalk = {t
 	| `std.Some f:
 		curf = f
 	| `std.None:
-		-> writemsg(`proto9.Rerror [.tag=t.tag, .err=Ebadfid])
+		writemsg(&(`proto9.Rerror [.tag=t.tag, .err=Ebadfid]))
+	-> wbuf
 	;;
 	std.fput(std.Err, "Walk:\n")
 	r.tag = t.tag
-	r.nnwqid = t.nwnames
-	for var i = 0; i < t.nwnames; i++
-		std.fput(std.Err, "\t{}\n", t.wnames[i])
-		-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented walk"])
+	r.nwqid = t.nwname
+	for var i = 0; i < t.nwname; i++
+		std.fput(std.Err, "\t{}\n", t.wname[i])
+		writemsg(&(`proto9.Rerror [.tag=t.tag, .err="unimplemented walk"]))
+	-> wbuf
 	;;
 	std.htput(fids, t.newfid, curf)
-	-> writemsg(`proto9.Rwalk r)
+	writemsg(&(`proto9.Rwalk r))
+	-> wbuf
 }
 
 const rstat = {t
-	-> writemsg(`proto9.Rstat [
+	writemsg(&(`proto9.Rstat [
 		.tag=t.tag,
 		.stat=root.stat
-	])
+	]))
+	-> wbuf
 }
 
 const rwstat = {t
-	-> writemsg(`proto9.Rerror [.tag=t.tag, .err="unimplemented"])
+	writemsg(&(`proto9.Rerror [.tag=t.tag, .err="unimplemented"]))
+	-> wbuf
 }
 
 const main = {
@@ -170,7 +189,7 @@ const main = {
 	inf = bio.mkfile(std.In, bio.Rd)
 	
 	while true
-		msg = readmsg()
+		readmsg(&msg)
 		/* std.fput(std.Err, "msg: {}\n", msg) */
 		match msg
 		| `proto9.Tversion t: r = rversion(t)

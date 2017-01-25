@@ -2,12 +2,45 @@ use std
 
 pkg proto9 =
 	
-	const HeaderSize = 4 + 1
-	const ReadOverhead = HeaderSize + 4
-	const WriteOverhead = HeaderSize + 4 + 8 + 4
-	
-	const NoTag : uint16 = 0xffff
-	const NoFid : uint32 = 0xffffffff
+	const Notag : uint16 = 0xffff
+	const Nofid : uint32 = 0xffffffff
+
+	const Bit8sz	: uint32 = 1
+	const Bit16sz	: uint32 = 2
+	const Bit32sz	: uint32 = 4
+	const Bit64sz	: uint32 = 8
+	const Qidsz	: uint32 = \
+		Bit8sz + Bit32sz + Bit64sz
+	const Statfixsz	: uint32 = \
+		Bit16sz+Qidsz+5*Bit16sz+4*Bit32sz+1*Bit64sz
+
+	const Tversion	: uint8 = 100
+	const Rversion	: uint8 = 101
+	const Tauth	: uint8 = 102
+	const Rauth	: uint8 = 103
+	const Tattach	: uint8 = 104
+	const Rattach	: uint8 = 105
+	const Rerror	: uint8 = 107
+	const Tflush	: uint8 = 108
+	const Rflush	: uint8 = 109
+	const Twalk 	: uint8 = 110
+	const Rwalk	: uint8 = 111
+	const Topen	: uint8 = 112
+	const Ropen	: uint8 = 113
+	const Tcreate	: uint8 = 114
+	const Rcreate	: uint8 = 115
+	const Tread	: uint8 = 116
+	const Rread	: uint8 = 117
+	const Twrite	: uint8 = 118
+	const Rwrite	: uint8 = 119
+	const Tclunk	: uint8 = 120
+	const Rclunk	: uint8 = 121
+	const Tremove	: uint8 = 122
+	const Rremove	: uint8 = 123
+	const Tstat	: uint8 = 124
+	const Rstat	: uint8 = 125
+	const Twstat	: uint8 = 126
+	const Rwstat	: uint8 = 127
 	
 	const Dmdir    : uint32 = 0x80000000
 	const Dmappend : uint32 = 0x40000000
@@ -21,40 +54,40 @@ pkg proto9 =
 	
 	const Qtfile   : uint8 = 0x00
 	const Qttmp    : uint8 = 0x04
-	const Qtauth   : uint8   = 0x08
-	const Qtmount  : uint8  = 0x10
-	const Qtexcl   : uint8   = 0x20
+	const Qtauth   : uint8 = 0x08
+	const Qtmount  : uint8 = 0x10
+	const Qtexcl   : uint8 = 0x20
 	const Qtappend : uint8 = 0x40
-	const Qtdir    : uint8   = 0x80
+	const Qtdir    : uint8 = 0x80
 	
 	type msg = union
-		`Tversion	version
-		`Rversion	version
-		`Tauth	tauth
-		`Rauth	rauth
-		`Rerror	rerror
-		`Tflush	tflush
-		`Rflush	rflush
-		`Tattach	tattach
-		`Rattach	rattach
-		`Twalk	twalk
-		`Rwalk	rwalk
-		`Topen	topen
-		`Ropen	ropen
-		`Tcreate	tcreate
-		`Rcreate	rcreate
-		`Tread	tread
-		`Rread	rread
-		`Twrite	twrite
-		`Rwrite	rwrite
-		`Tstat	tstat
-		`Rstat	rstat
-		`Tclunk	tclunk
-		`Rclunk	rclunk
-		`Tremove	tremove
-		`Rremove	rremove
-		`Twstat	twstat
-		`Rwstat	rwstat
+		`Tversion version
+		`Rversion version
+		`Tauth tauth
+		`Rauth rauth
+		`Rerror rerror
+		`Tflush tflush
+		`Rflush rflush
+		`Tattach tattach
+		`Rattach rattach
+		`Twalk twalk
+		`Rwalk rwalk
+		`Topen topen
+		`Ropen ropen
+		`Tcreate tcreate
+		`Rcreate rcreate
+		`Tread tread
+		`Rread rread
+		`Twrite twrite
+		`Rwrite rwrite
+		`Tstat tstat
+		`Rstat rstat
+		`Tclunk tclunk
+		`Rclunk rclunk
+		`Tremove tremove
+		`Rremove rremove
+		`Twstat twstat
+		`Rwstat rwstat
 	;;
 	
 	const qidlen : uint32 = 13
@@ -79,9 +112,10 @@ pkg proto9 =
 		muid	: byte[:]
 	;;
 
+
 	type version = struct
 		tag	: uint16
-		size	: uint32
+		msize	: uint32
 		version	: byte[:]
 	;;
 
@@ -95,6 +129,19 @@ pkg proto9 =
 	type rauth = struct
 		tag	: uint16
 		aqid	: qid
+	;;
+
+	type tattach = struct
+		tag	: uint16
+		fid	: uint32
+		afid	: uint32
+		uname	: byte[:]
+		aname	: byte[:]
+	;;
+	
+	type rattach = struct
+		tag	: uint16
+		qid	: qid
 	;;
 
 	type rerror = struct
@@ -111,31 +158,18 @@ pkg proto9 =
 		tag	: uint16
 	;;
 
-	type tattach = struct
-		tag	: uint16
-		fid	: uint32
-		afid	: uint32
-		uname	: byte[:]
-		aname	: byte[:]
-	;;
-	
-	type rattach = struct
-		tag	: uint16
-		qid	: qid
-	;;
-
 	type twalk = struct
 		tag	: uint16
 		fid	: uint32
 		newfid	: uint32
-		nwnames	: uint16
-		wnames	: byte[:][16]
+		nwname	: uint16
+		wname	: byte[:][16]
 	;;
 
 	type rwalk = struct
 		tag	: uint16
-		nnwqid	: uint16
-		nwqid	: qid[16]
+		nwqid	: uint16
+		wqid	: qid[16]
 	;;
 
 	type topen = struct
@@ -226,1094 +260,557 @@ pkg proto9 =
 		tag	: uint16
 	;;
 	
-	const unpackmsg	: (buf : byte[:] -> std.option(msg))
-	const packmsg	: (buf : byte[:], m : msg -> std.option(byte[:]))
+	const unpackmsg	: (msgp : msg#, buf : byte[:] -> bool)
+	const packmsg	: (msgp : msg#, buf : byte[:] -> std.option(std.size))
 ;;
 
-const Mt_tversion	: byte = 100
-const Mt_rversion	: byte = 101
-const Mt_tauth		: byte = 102
-const Mt_rauth		: byte = 103
-const Mt_tattach	: byte = 104
-const Mt_rattach	: byte = 105
-const Mt_rerror		: byte = 107
-const Mt_tflush		: byte = 108
-const Mt_rflush		: byte = 109
-const Mt_twalk 		: byte = 110
-const Mt_rwalk		: byte = 111
-const Mt_topen		: byte = 112
-const Mt_ropen		: byte = 113
-const Mt_tcreate	: byte = 114
-const Mt_rcreate	: byte = 115
-const Mt_tread		: byte = 116
-const Mt_rread		: byte = 117
-const Mt_twrite		: byte = 118
-const Mt_rwrite		: byte = 119
-const Mt_tclunk		: byte = 120
-const Mt_rclunk		: byte = 121
-const Mt_tremove	: byte = 122
-const Mt_rremove	: byte = 123
-const Mt_tstat		: byte = 124
-const Mt_rstat		: byte = 125
-const Mt_twstat		: byte = 126
-const Mt_rwstat		: byte = 127
+const unpackmsg = {msgp, buf
+	var len, oflow, kind, tag
+	var tw, rw
 
-const unpackmsg = {buf
 	if buf.len < 5
-		-> `std.None
+		-> false
 	;;
-	match buf[4]
-	| Mt_tversion:
-		-> unpack_tversion(buf[5:])
-	| Mt_rversion:
-		-> unpack_rversion(buf[5:])
-	| Mt_tauth:
-		-> unpack_tauth(buf[5:])
-	| Mt_rauth:
-		-> unpack_rauth(buf[5:])
-	| Mt_tattach:
-		-> unpack_tattach(buf[5:])
-	| Mt_rattach:
-		-> unpack_rattach(buf[5:])
-	| Mt_rerror:
-		-> unpack_rerror(buf[5:])
-	| Mt_tflush:
-		-> unpack_tflush(buf[5:])
-	| Mt_rflush:
-		-> unpack_rflush(buf[5:])
-	| Mt_twalk:
-		-> unpack_twalk(buf[5:])
-	| Mt_rwalk:
-		-> unpack_rwalk(buf[5:])
-	| Mt_topen:
-		-> unpack_topen(buf[5:])
-	| Mt_ropen:
-		-> unpack_ropen(buf[5:])
-	| Mt_tcreate:
-		-> unpack_tcreate(buf[5:])
-	| Mt_rcreate:
-		-> unpack_rcreate(buf[5:])
-	| Mt_tread:
-		-> unpack_tread(buf[5:])
-	| Mt_rread:
-		-> unpack_rread(buf[5:])
-	| Mt_twrite:
-		-> unpack_twrite(buf[5:])
-	| Mt_rwrite:
-		-> unpack_rwrite(buf[5:])
-	| Mt_tclunk:
-		-> unpack_tclunk(buf[5:])
-	| Mt_rclunk:
-		-> unpack_rclunk(buf[5:])
-	| Mt_tremove:
-		-> unpack_tremove(buf[5:])
-	| Mt_rremove:
-		-> unpack_rremove(buf[5:])
-	| Mt_tstat:
-		-> unpack_tstat(buf[5:])
-	| Mt_rstat:
-		-> unpack_rstat(buf[5:])
-	| Mt_twstat:
-		-> unpack_twstat(buf[5:])
-	| Mt_rwstat:
-		-> unpack_rwstat(buf[5:])
+
+	len = gbit32(&buf)
+	if buf.len + 4 < len
+		-> false
+	;;
+	buf = buf[:len-4]
+	oflow = false
+
+	kind = gbit8(&buf)
+	tag = gbit16(&buf)
+
+	match kind
+	| Tversion:
+		msgp# = `Tversion [
+			.tag=tag,
+			.msize=gbit32(&buf),
+			.version=gstr(&buf, &oflow)
+		]
+	| Rversion:
+		msgp# = `Rversion [
+			.tag=tag,
+			.msize=gbit32(&buf),
+			.version=gstr(&buf, &oflow)
+		]
+	| Tauth:
+		msgp# = `Tauth [
+			.tag=tag,
+			.afid=gbit32(&buf),
+			.uname=gstr(&buf, &oflow),
+			.aname=gstr(&buf, &oflow),
+		]
+	| Rauth:
+		msgp# = `Rauth [
+			.tag=tag,
+			.aqid=gqid(&buf),
+		]
+	| Tattach:
+		msgp# = `Tattach [
+			.tag=tag,
+			.fid=gbit32(&buf),
+			.afid=gbit32(&buf),
+			.uname=gstr(&buf, &oflow),
+			.aname=gstr(&buf, &oflow)
+		]
+	| Rattach:
+		msgp# = `Rattach [
+			.tag=tag,
+			.qid=gqid(&buf),
+		]
+	| Rerror:
+		msgp# = `Rerror [
+			.tag=tag,
+			.err=gstr(&buf, &oflow),
+		]
+	| Tflush:
+		msgp# = `Tflush [
+			.tag=tag,
+			.oldtag=gbit16(&buf),
+		]
+
+	| Rflush:
+		msgp# = `Rflush [
+			.tag=tag,
+		]
+	| Twalk:
+		twalkunpack(&buf, &tw, tag, &oflow)
+		msgp# = `Twalk tw
+	| Rwalk:
+		rwalkunpack(&buf, &rw, tag, &oflow)
+		msgp# = `Rwalk rw
+	| Topen:
+		msgp# = `Topen [
+			.tag=tag,
+			.fid=gbit32(&buf),
+			.mode=gbit8(&buf)
+		]
+	| Ropen:
+		msgp# = `Ropen [
+			.tag=tag,
+			.qid=gqid(&buf),
+			.iounit=gbit32(&buf),
+		]
+	| Tcreate:
+		msgp# = `Tcreate [
+			.tag=tag,
+			.fid=gbit32(&buf),
+			.name=gstr(&buf, &oflow),
+			.perm=gbit32(&buf),
+			.mode=gbit8(&buf),
+		]
+	| Rcreate:
+		msgp# = `Rcreate [
+			.tag=tag,
+			.qid=gqid(&buf),
+			.iounit=gbit32(&buf),
+		]
+	| Tread:
+		msgp# = `Tread [
+			.tag=tag,
+			.fid=gbit32(&buf),
+			.off=gbit64(&buf),
+			.count=gbit32(&buf)
+		]
+	| Rread:
+		msgp# = `Rread [
+			.tag=tag,
+			.data=gdata(&buf, &oflow),
+		]
+	| Twrite:
+		msgp# = `Twrite [
+			.tag=tag,
+			.fid=gbit32(&buf),
+			.off=gbit64(&buf),
+			.data=gdata(&buf, &oflow),
+		]
+	| Rwrite:
+		msgp# = `Rwrite [
+			.tag=tag,
+			.count=gbit32(&buf),
+		]
+	| Tclunk:
+		msgp# = `Tclunk [
+			.tag=tag,
+			.fid=gbit32(&buf),
+		]
+	| Rclunk:
+		msgp# = `Rclunk [
+			.tag=tag,
+		]
+	| Tremove:
+		msgp# = `Tremove [
+			.tag=tag,
+			.fid=gbit32(&buf)
+		]
+	| Rremove:
+		msgp# = `Rremove [
+			.tag=tag,
+		]
+	| Tstat:
+		msgp# = `Tstat [
+			.tag=tag,
+			.fid=gbit32(&buf),
+		]
+	| Rstat:
+		msgp# = `Rstat [
+			.tag=tag,
+			.stat=gstat(&buf, &oflow),
+		]
+	| Twstat:
+		msgp# = `Twstat [
+			.tag=tag,
+			.fid=gbit32(&buf),
+			.stat=gstat(&buf, &oflow)
+		]
+	| Rwstat:
+		msgp# = `Rwstat [
+			.tag=tag
+		]
 	| _:
-		-> `std.None
+		-> false
 	;;
+
+	if oflow
+		-> false
+	;;
+	-> true
 }
 
-const packmsg = {buf, msg
-	var packed
+const packmsg = {msgp, buf
+	var b, sz
 	
+	/* leave packing the size for later */
 	if buf.len < 4
 		-> `std.None
 	;;
 	
-	match msg
-	| `Tversion m:
-		buf[4] = Mt_tversion
-		packed = pack_version(buf[5:], m)
-	| `Rversion m:
-		buf[4] = Mt_rversion
-		packed = pack_version(buf[5:], m)
-	| `Tauth m:
-		buf[4] = Mt_tauth
-		packed = pack_tauth(buf[5:], m)
-	| `Rauth m:
-		buf[4] = Mt_rauth
-		packed = pack_rauth(buf[5:], m)
-	| `Tattach m:
-		buf[4] = Mt_tattach
-		packed = pack_tattach(buf[5:], m)
-	| `Rattach m:
-		buf[4] = Mt_rattach
-		packed = pack_rattach(buf[5:], m)
-	| `Rerror m:
-		buf[4] = Mt_rerror
-		packed = pack_rerror(buf[5:], m)
-	| `Tflush m:
-		buf[4] = Mt_tflush
-		packed = pack_tflush(buf[5:], m)
-	| `Rflush m:
-		buf[4] = Mt_rflush
-		packed = pack_rflush(buf[5:], m)
-	| `Twalk m:
-		buf[4] = Mt_twalk
-		packed = pack_twalk(buf[5:], m)
-	| `Rwalk m:
-		buf[4] = Mt_rwalk
-		packed = pack_rwalk(buf[5:], m)
-	| `Topen m:
-		buf[4] = Mt_topen
-		packed = pack_topen(buf[5:], m)
-	| `Ropen m:
-		buf[4] = Mt_ropen
-		packed = pack_ropen(buf[5:], m)
-	| `Tcreate m:
-		buf[4] = Mt_tcreate
-		packed = pack_tcreate(buf[5:], m)
-	| `Rcreate m:
-		buf[4] = Mt_rcreate
-		packed = pack_rcreate(buf[5:], m)
-	| `Tread m:
-		buf[4] = Mt_tread
-		packed = pack_tread(buf[5:], m)
-	| `Rread m:
-		buf[4] = Mt_rread
-		packed = pack_rread(buf[5:], m)
-	| `Twrite m:
-		buf[4] = Mt_twrite
-		packed = pack_twrite(buf[5:], m)
-	| `Rwrite m:
-		buf[4] = Mt_rwrite
-		packed = pack_rwrite(buf[5:], m)
-	| `Tclunk m:
-		buf[4] = Mt_tclunk
-		packed = pack_tclunk(buf[5:], m)
-	| `Rclunk m:
-		buf[4] = Mt_rclunk
-		packed = pack_rclunk(buf[5:], m)
-	| `Tremove m:
-		buf[4] = Mt_tremove
-		packed = pack_tremove(buf[5:], m)
-	| `Rremove m:
-		buf[4] = Mt_rremove
-		packed = pack_rremove(buf[5:], m)
-	| `Tstat m:
-		buf[4] = Mt_tstat
-		packed = pack_tstat(buf[5:], m)
-	| `Rstat m:
-		buf[4] = Mt_rstat
-		packed = pack_rstat(buf[5:], m)
-	| `Twstat m:
-		buf[4] = Mt_twstat
-		packed = pack_twstat(buf[5:], m)
-	| `Rwstat m:
-		buf[4] = Mt_rwstat
-		packed = pack_rwstat(buf[5:], m)
-	;;
-	
-	match packed
-	| `std.None:
-		-> `std.None
-	| `std.Some msgbuf:
-		std.putle32(buf[0:4], msgbuf.len + 5)
-		-> `std.Some buf[0:5+msgbuf.len]
-	;;
-}
-
-const pack_version = {buf, msg
-	var sz : uint32 = 2 + 4 + 2 + msg.version.len
-	var off : uint32
-	
-	if buf.len < sz
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.putle32(buf[2:6], msg.size)
-	std.putle16(buf[6:8], msg.version.len)
-	off = 8
-	std.slcp(buf[off:off+msg.version.len], msg.version)
-	off += msg.version.len
-	-> `std.Some buf[0:off]
-}
-
-const unpack_version = {buf
-	var len : uint32 = 2 + 4 + 2
-	var verlen : uint32
-	
-	if buf.len < len
-		-> `std.None
-	;;
-	verlen = std.getle16(buf[6:8])
-	len += verlen
-	if buf.len < len
-		-> `std.None
-	;;
-	-> `std.Some [
-		.tag=std.getle16(buf[0:2]),
-		.size=std.getle32(buf[2:6]),
-		.version=buf[8:8+verlen],
-	]
-}
-
-const pack_tversion = {buf, msg
-	-> pack_version(buf, msg)
-}
-
-const unpack_tversion = {buf
-	match unpack_version(buf)
-	| `std.Some m:
-		-> `std.Some `Tversion m
-	| `std.None:
-		-> `std.None
-	;;
-}
-
-const pack_rversion = {buf, msg
-	-> pack_version(buf, msg)
-}
-
-const unpack_rversion = {buf
-	match unpack_version(buf)
-	| `std.Some m:
-		-> `std.Some `Rversion m
-	| `std.None:
-		-> `std.None
-	;;
-}
-
-const pack_tauth = {buf, msg -> std.option(byte[:])
-	var sz : uint32 = 2 + 4 + 2 + msg.uname.len + msg.aname.len
-	var off : uint32
-	
-	if buf.len < sz
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.putle32(buf[2:6], msg.afid)
-	std.putle16(buf[6:8], msg.uname.len)
-	off = 8
-	std.slcp(buf[off:off+msg.uname.len], msg.uname)
-	off += msg.uname.len
-	std.putle16(buf[off:off+2], msg.aname.len)
-	off += 2
-	std.slcp(buf[off:off+msg.aname.len], msg.aname)
-	off += msg.aname.len
-	-> `std.Some buf[0:off]
-}
-
-const unpack_tauth = {buf
-	var off : uint32 = 0
-	var anamelen : uint32
-	var anameoff : uint32
-	var unamelen : uint32
-	var unameoff : uint32
-	
-	off = 6
-	if buf.len < off + 2
-		-> `std.None
-	;;
-	unamelen = std.getle16(buf[off:off+2])
-	off += 2
-	unameoff = off
-	off += unamelen 
-	if buf.len < off + 2
-		-> `std.None
-	;;
-	anamelen = std.getle16(buf[off:off+2])
-	off += 2
-	anameoff = off
-	off += anamelen 
-	
-	-> `std.Some `Tauth [
-		.tag=std.getle16(buf[0:2]),
-		.afid=std.getle32(buf[2:6]),
-		.uname=buf[unameoff:unameoff+unamelen],
-		.aname=buf[anameoff:anameoff+anamelen],
-	]
-}
-
-const pack_qid = {buf, qid : qid
-	if buf.len < qidlen
-		-> `std.None
-	;;
-	std.putle8(buf[0:1], qid.ty)
-	std.putle32(buf[1:5], qid.vers)
-	std.putle64(buf[5:13], qid.path)
-	-> `std.Some buf[:qidlen]
-}
-
-const pack_rauth = {buf, msg
-	if buf.len < 2 + qidlen
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	match pack_qid(buf[2:], msg.aqid)
-	| `std.Some q:
-		-> `std.Some buf[:2+q.len]
-	| `std.None:
-		-> `std.None
-	;;
-}
-
-const unpack_qid = {buf
-	var qid : qid
-	
-	if buf.len != qidlen
-		-> `std.None
-	;;
-	qid.ty = std.getle8(buf[0:1])
-	qid.vers = std.getle32(buf[1:5])
-	qid.path = std.getle64(buf[5:13])
-	-> `std.Some qid
-}
-
-const unpack_rauth = {buf
-	if buf.len < 2 + qidlen
-		-> `std.None
-	;;
-	match unpack_qid(buf[2:2+qidlen])
-	| `std.Some qid:
-		-> `std.Some `Rauth [
-			.tag=std.getle16(buf[0:2]),
-			.aqid=qid,
-		]
-	| `std.None:
-		-> `std.None
-	;;
-}
-
-const pack_rerror = {buf, msg
-	var sz : uint32 = 2 + 2 + msg.err.len
-	
-	if buf.len < sz
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.putle16(buf[2:4], msg.err.len)
-	std.slcp(buf[4:4+msg.err.len], msg.err)
-	-> `std.Some buf[0:4+msg.err.len]
-}
-
-const unpack_rerror = {buf
-	var errlen : uint32
-	
-	if buf.len < 4
-		-> `std.None
-	;;
-	errlen = std.getle16(buf[2:4])
-	if buf.len < errlen + 4
-		-> `std.None
-	;;
-	-> `std.Some `Rerror [
-		.tag=std.getle16(buf[0:2]),
-		.err=buf[4:4+errlen],
-	]
-}
-
-const pack_tattach = {buf, msg -> std.option(byte[:])
-	var sz : uint32 = 2 + 4 + 4 + 2 + msg.uname.len + msg.aname.len
-	var off : uint32
-	
-	if buf.len < sz
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.putle32(buf[2:6], msg.fid)
-	std.putle32(buf[6:10], msg.afid)
-	std.putle16(buf[10:12], msg.uname.len)
-	off = 12
-	std.slcp(buf[off:off+msg.uname.len], msg.uname)
-	off += msg.uname.len
-	std.putle16(buf[off:off+2], msg.aname.len)
-	off += 2
-	std.slcp(buf[off:off+msg.aname.len], msg.aname)
-	off += msg.aname.len
-	-> `std.Some buf[0:off]
-}
-
-const unpack_tattach = {buf
-	var off : uint32 = 0
-	var anamelen : uint32
-	var anameoff : uint32
-	var unamelen : uint32
-	var unameoff : uint32
-	
-	off = 10
-	if buf.len < off + 2
-		-> `std.None
-	;;
-	unamelen = std.getle16(buf[off:off+2])
-	off += 2
-	unameoff = off
-	off += unamelen 
-	if buf.len < off + 2
-		-> `std.None
-	;;
-	anamelen = std.getle16(buf[off:off+2])
-	off += 2
-	anameoff = off
-	off += anamelen 
-	
-	-> `std.Some `Tattach [
-		.tag=std.getle16(buf[0:2]),
-		.fid=std.getle32(buf[2:6]),
-		.afid=std.getle32(buf[6:10]),
-		.uname=buf[unameoff:unameoff+unamelen],
-		.aname=buf[anameoff:anameoff+anamelen],
-	]
-}
-
-const pack_rattach = {buf, msg
-	if buf.len < 2 + qidlen
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	match pack_qid(buf[2:], msg.qid)
-	| `std.Some q:
-		-> `std.Some buf[:2+q.len]
-	| `std.None:
-		-> `std.None
-	;;
-}
-
-const unpack_rattach = {buf
-	if buf.len < 2 + qidlen
-		-> `std.None
-	;;
-	match unpack_qid(buf[2:2+qidlen])
-	| `std.Some qid:
-		-> `std.Some `Rattach [
-			.tag=std.getle16(buf[0:2]),
-			.qid=qid,
-		]
-	| `std.None:
-		-> `std.None
-	;;
-}
-
-const pack_tflush = {buf, msg
-	if buf.len < 2 + 2
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.putle16(buf[2:4], msg.oldtag)
-	-> `std.Some buf[0:4]
-}
-
-const unpack_tflush = {buf
-	if buf.len < 2 + 2
-		-> `std.None
-	;;
-	-> `std.Some `Tflush [
-		.tag=std.getle16(buf[0:2]),
-		.oldtag=std.getle16(buf[2:4]),
-	]
-}
-
-const pack_rflush = {buf, msg
-	if buf.len < 2
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	-> `std.Some buf[0:2]
-}
-
-const unpack_rflush = {buf
-	if buf.len < 2
-		-> `std.None
-	;;
-	-> `std.Some `Rflush [
-		.tag=std.getle16(buf[0:2]),
-	]
-}
-
-const pack_twalk = {buf, msg
-	var sz : uint32
-	var off : uint32
-
-	sz = 2 + 4 + 4 + 2 + 2*(msg.nwnames castto(uint32))
-	for var i = 0; i < msg.nwnames; i++
-		sz += msg.wnames[i].len
-	;;
-	if buf.len < sz
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.putle32(buf[2:6], msg.fid)
-	std.putle32(buf[6:10], msg.newfid)
-	std.putle16(buf[10:12], msg.nwnames)
-	off = 12
-	for var i = 0; i < msg.nwnames; i++
-		std.putle16(buf[off:off+2], msg.wnames[i].len)
-		off += 2
-		std.slcp(buf[off:off+msg.wnames[i].len], msg.wnames[i])
-		off += msg.wnames[i].len
-	;;
-	-> `std.Some buf[:off]
-}
-
-const unpack_twalk = {buf
-	var off : uint32 = 2 + 4 + 4 + 2
-	var nlen : uint32
-	var walk
-
-	for var i = 0; i < 16; i++
-		walk.wnames[i] = ""
-	;;
-
-	if buf.len < off
-		-> `std.None
-	;;
-
-	walk.tag = std.getle16(buf[0:2])
-	walk.fid = std.getle32(buf[2:6])
-	walk.newfid = std.getle32(buf[6:10])
-	walk.nwnames = std.getle16(buf[10:12])
-	if walk.nwnames > 16
-		-> `std.None
-	;;
-	for var i = 0; i < walk.nwnames; i++
-		if buf.len < off + 2
-			-> `std.None
+	sz = 4
+	b = buf[4:]
+	match msgp#
+	| `Tversion [.tag=tag, .msize=msize, .version=version]:
+		sz += pbit8(&b, Tversion)
+		sz += pbit16(&b, tag)
+		sz += pbit32(&b, msize)
+		sz += pstr(&b, version)
+	| `Rversion [.tag=tag, .msize=msize, .version=version]:
+		sz += pbit8(&b, Rversion)
+		sz += pbit16(&b, tag)
+		sz += pbit32(&b, msize)
+		sz += pstr(&b, version)
+	| `Tauth [.tag=tag, .afid=afid, .uname=uname, .aname=aname]:
+		sz += pbit8(&b, Tauth)
+		sz += pbit16(&b, tag)
+		sz += pbit32(&b, afid)
+		sz += pstr(&b, uname)
+		sz += pstr(&b, aname)
+	| `Rauth [.tag=tag, .aqid=aqid]:
+		sz += pbit8(&b, Rauth)
+		sz += pbit16(&b, tag)
+		sz += pqid(&b, aqid)
+	| `Tattach [.tag=tag, .fid=fid, .afid=afid, .uname=uname, .aname=aname]:
+		sz += pbit8(&b, Tattach)
+		sz += pbit16(&b, tag)
+		sz += pbit32(&b, fid)
+		sz += pbit32(&b, afid)
+		sz += pstr(&b, uname)
+		sz += pstr(&b, aname)
+	| `Rattach [.tag=tag, .qid=qid]:
+		sz += pbit8(&b, Rattach)
+		sz += pbit16(&b, tag)
+		sz += pqid(&b, qid)
+	| `Rerror [.tag=tag, .err=err]:
+		sz += pbit8(&b, Rerror);
+		sz += pbit16(&b, tag)
+		sz += pstr(&b, err)
+	| `Tflush [.tag=tag, .oldtag=ot]:
+		sz += pbit8(&b, Tflush)
+		sz += pbit16(&b, tag)
+		sz += pbit16(&b, ot)
+	| `Rflush [.tag=tag]:
+		sz += pbit8(&b, Rflush)
+		sz += pbit16(&b, tag)
+	| `Twalk [.tag=tag, .fid=fid, .newfid=newfid, .nwname=nwname, .wname=wname]:
+		sz += pbit8(&b, Twalk);
+		sz += pbit16(&b, tag)
+		sz += pbit32(&b, fid)
+		sz += pbit32(&b, newfid)
+		sz += pbit16(&b, nwname)
+		for var i = 0; i < nwname; i++
+			sz += pstr(&b, wname[i])
 		;;
-		nlen = std.getle16(buf[off:off+2])
-		off += 2
-		if buf.len < off + nlen
-			-> `std.None
+	| `Rwalk [.tag=tag, .nwqid=nwqid, .wqid=wqid]:
+		sz += pbit8(&b, Rwalk);
+		sz += pbit16(&b, tag)
+		sz += pbit16(&b, nwqid)
+		for var i = 0; i < nwqid; i++
+			sz += pqid(&b, wqid[i])
 		;;
-		walk.wnames[i] = buf[off:off+nlen]
-		off += nlen
+	| `Topen [.tag=tag, .fid=fid, .mode=mode]:
+		sz += pbit8(&b, Topen);
+		sz += pbit16(&b, tag)
+		sz += pbit32(&b, fid)
+		sz += pbit8(&b, mode)
+	| `Ropen [.tag=tag, .qid=qid, .iounit=iounit]:
+		sz += pbit8(&b, Ropen);
+		sz += pbit16(&b, tag)
+		sz += pqid(&b, qid)
+		sz += pbit32(&b, iounit)
+	| `Tcreate [.tag=tag, .fid=fid, .name=name, .perm=perm, .mode=mode]:
+		sz += pbit8(&b, Tcreate);
+		sz += pbit16(&b, tag)
+		sz += pbit32(&b, fid)
+		sz += pstr(&b, name)
+		sz += pbit32(&b, perm)
+		sz += pbit8(&b, mode)
+	| `Rcreate [.tag=tag, .qid=qid, .iounit=iounit]:
+		sz += pbit8(&b, Rcreate);
+		sz += pbit16(&b, tag)
+		sz += pqid(&b, qid)
+		sz += pbit32(&b, iounit)
+	| `Tread [.tag=tag, .fid=fid, .off=off, .count=count]:
+		sz += pbit8(&b, Tread);
+		sz += pbit16(&b, tag)
+		sz += pbit32(&b, fid)
+		sz += pbit64(&b, off)
+		sz += pbit32(&b, count)
+	| `Rread [.tag=tag, .data=data]:
+		sz += pbit8(&b, Rread);
+		sz += pbit16(&b, tag)
+		sz += pdata(&b, data)
+	| `Twrite [.tag=tag, .fid=fid, .off=off, .data=data]:
+		sz += pbit8(&b, Twrite);
+		sz += pbit16(&b, tag)
+		sz += pbit32(&b, fid)
+		sz += pbit64(&b, off)
+		sz += pdata(&b, data)
+	| `Rwrite [.tag=tag, .count=count]:
+		sz += pbit8(&b, Rwrite);
+		sz += pbit16(&b, tag)
+		sz += pbit32(&b, count)
+	| `Tclunk [.tag=tag, .fid=fid]:
+		sz += pbit8(&b, Tclunk);
+		sz += pbit16(&b, tag)
+		sz += pbit32(&b, fid)
+	| `Rclunk [.tag=tag]:
+		sz += pbit8(&b, Rclunk);
+		sz += pbit16(&b, tag)
+	| `Tremove [.tag=tag, .fid=fid]:
+		sz += pbit8(&b, Tremove);
+		sz += pbit16(&b, tag)
+		sz += pbit32(&b, fid)
+	| `Rremove [.tag=tag]:
+		sz += pbit8(&b, Rremove);
+		sz += pbit16(&b, tag)
+	| `Tstat [.tag=tag, .fid=fid]:
+		sz += pbit8(&b, Tstat);
+		sz += pbit16(&b, tag)
+		sz += pbit32(&b, fid)
+	| `Rstat [.tag=tag, .stat=stat]:
+		sz += pbit8(&b, Rstat);
+		sz += pbit16(&b, tag)
+		sz += pstat(&b, &stat)
+	| `Twstat [.tag=tag, .fid=fid, .stat=stat]:
+		sz += pbit8(&b, Twstat);
+		sz += pbit16(&b, tag)
+		sz += pbit32(&b, fid)
+		sz += pstat(&b, &stat)
+	| `Rwstat [.tag=tag]:
+		sz += pbit8(&b, Rwstat);
+		sz += pbit16(&b, tag)
 	;;
-	-> `std.Some `Twalk walk
+
+	if sz > buf.len
+		-> `std.None
+	;;
+	std.putle32(buf[:4], sz)
+	-> `std.Some sz
 }
 
-const pack_rwalk = {buf, msg
-	var sz : uint32
-	var off : uint32
-
-	sz = 2 + 2 + qidlen*(msg.nnwqid castto(uint32))
-	if buf.len < sz
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.putle16(buf[2:4], msg.nnwqid)
-	off = 4
-	for var i = 0; i < msg.nnwqid; i++
-		std.get(pack_qid(buf[off:off+qidlen], msg.nwqid[i]))
-		off += qidlen
-	;;
-	-> `std.Some buf[:off]
-}
-
-const unpack_rwalk = {buf
-	var off : uint32 = 2 + 2
-	var walk
-
-	if buf.len < off
-		-> `std.None
-	;;
-	walk.tag = std.getle16(buf[0:2])
-	walk.nnwqid = std.getle16(buf[2:4])
-	if walk.nnwqid > 16
-		-> `std.None
-	;;
-	for var i = 0; i < walk.nnwqid; i++
-		match unpack_qid(buf[off:off+qidlen])
-		| `std.Some qid:
-			walk.nwqid[i] = qid
-		| `std.None:
-			-> `std.None
+const twalkunpack = {b, w, tag, oflow
+	w.tag = tag
+	w.fid = gbit32(b)
+	w.newfid = gbit32(b)
+	w.nwname = gbit16(b)
+	if w.nwname > 16
+		oflow# = true
+	else
+		for var i = 0; i < w.nwname; i++
+			w.wname[i] = gstr(b, oflow)
 		;;
-		off += qidlen
-	;;
-	-> `std.Some `Rwalk walk
-}
-
-const pack_topen = {buf, msg
-	if buf.len < 2 + 4 + 1
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.putle32(buf[2:6], msg.fid)
-	std.putle8(buf[6:7], msg.mode)
-	-> `std.Some buf[0:7]
-}
-
-const unpack_topen = {buf
-	if buf.len < 2 + 4 + 1
-		-> `std.None
-	;;
-	-> `std.Some `Topen [
-		.tag=std.getle16(buf[0:2]),
-		.fid=std.getle32(buf[2:6]),
-		.mode=std.getle8(buf[6:7])
-	]
-}
-
-const pack_ropen = {buf, msg
-	if buf.len < 2 + qidlen + 4
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.get(pack_qid(buf[2:2+qidlen], msg.qid))
-	std.putle32(buf[2+qidlen:2+qidlen+4], msg.iounit)
-	-> `std.Some buf[0:2+qidlen+4]
-}
-
-const unpack_ropen = {buf
-	if buf.len < 2 + qidlen + 4
-		-> `std.None
-	;;
-	-> `std.Some `Ropen [
-		.tag=std.getle16(buf[0:2]),
-		.qid=std.get(unpack_qid(buf[2:2+qidlen])),
-		.iounit=std.getle32(buf[2+qidlen:2+qidlen+4])
-	]
-}
-
-const pack_tcreate = {buf, msg
-	var off : uint32
-
-	if buf.len < 2 + 4 + 2 + msg.name.len + 4 + 1
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.putle32(buf[2:6], msg.fid)
-	std.putle16(buf[6:8], msg.name.len)
-	std.slcp(buf[8:8+msg.name.len], msg.name)
-	off = 8 + msg.name.len
-	std.putle32(buf[off:off+4], msg.perm)
-	off += 4
-	std.putle8(buf[off:off+1], msg.mode)
-	off += 1
-	-> `std.Some buf[0:off]
-}
-
-const unpack_tcreate= {buf
-	var off : uint32
-	var namelen : uint32
-	var name
-
-	if buf.len < 2 + 4 + 2
-		-> `std.None
-	;;
-
-	namelen = std.getle16(buf[6:8])
-	off = 8
-	if buf.len < off+namelen
-		-> `std.None
-	;;
-	name = buf[off:off+namelen]
-	off += namelen
-	if buf.len < off + 5
-		-> `std.None
-	;;
-
-	-> `std.Some `Tcreate [
-		.tag=std.getle16(buf[0:2]),
-		.fid=std.getle32(buf[2:6]),
-		.name=name,
-		.perm=std.getle32(buf[off:off+4]),
-		.mode=std.getle8(buf[off+4:off+5]),
-	]
-}
-
-const pack_rcreate = {buf, msg
-	if buf.len < 2 + qidlen + 4
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.get(pack_qid(buf[2:2+qidlen], msg.qid))
-	std.putle32(buf[2+qidlen:2+qidlen+4], msg.iounit)
-	-> `std.Some buf[0:2+qidlen+4]
-}
-
-const unpack_rcreate = {buf
-	if buf.len < 2 + qidlen + 4
-		-> `std.None
-	;;
-	-> `std.Some `Rcreate [
-		.tag=std.getle16(buf[0:2]),
-		.qid=std.get(unpack_qid(buf[2:2+qidlen])),
-		.iounit=std.getle32(buf[2+qidlen:2+qidlen+4])
-	]
-}
-
-const pack_tread = {buf, msg
-	if buf.len < 2 + 4 + 8 + 4
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.putle32(buf[2:6], msg.fid)
-	std.putle64(buf[6:14], msg.off)
-	std.putle32(buf[14:18], msg.count)
-	-> `std.Some buf[:18]
-}
-
-const unpack_tread = {buf
-	if buf.len < 2 + 4 + 8 + 4
-		-> `std.None
-	;;
-	-> `std.Some `Tread [
-		.tag = std.getle16(buf[0:2]),
-		.fid = std.getle32(buf[2:6]),
-		.off = std.getle64(buf[6:14]),
-		.count = std.getle32(buf[14:18]),
-	]
-}
-
-const pack_rread = {buf, msg
-	if buf.len < 2 + 4 + msg.data.len
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.putle32(buf[2:6], msg.data.len)
-	std.slcp(buf[6:6+msg.data.len], msg.data)
-	-> `std.Some buf[0:6+msg.data.len]
-}
-
-const unpack_rread = {buf
-	var datalen : uint32
-
-	if buf.len < 2 + 4
-		-> `std.None
-	;;
-	datalen = std.getle32(buf[2:6])
-	-> `std.Some `Rread [
-		.tag = std.getle16(buf[0:2]),
-		.data = buf[6:6+datalen]
-	]
-}
-
-const pack_twrite = {buf, msg
-	if buf.len < 2 + 4 + 8 + 4 + msg.data.len
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.putle32(buf[2:6], msg.fid)
-	std.putle64(buf[6:14], msg.off)
-	std.putle32(buf[14:18], msg.data.len)
-	std.slcp(buf[18:18+msg.data.len], msg.data)
-	-> `std.Some buf[:18+msg.data.len]
-}
-
-const unpack_twrite = {buf
-	var count : uint32
-	if buf.len < 2 + 4 + 8 + 4
-		-> `std.None
-	;;
-	
-	count = std.getle32(buf[14:18])
-	if buf.len < 18+count
-		-> `std.None
-	;;
-	
-	-> `std.Some `Twrite [
-		.tag = std.getle16(buf[0:2]),
-		.fid = std.getle32(buf[2:6]),
-		.off = std.getle64(buf[6:14]),
-		.data = buf[18:18+count],
-	]
-}
-
-const pack_rwrite = {buf, msg
-	if buf.len < 2 + 4
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.putle32(buf[2:6], msg.count)
-	-> `std.Some buf[0:6]
-}
-
-const unpack_rwrite = {buf
-	var datalen : uint32
-
-	if buf.len < 2 + 4
-		-> `std.None
-	;;
-	-> `std.Some `Rwrite [
-		.tag = std.getle16(buf[0:2]),
-		.count = std.getle32(buf[2:6])
-	]
-}
-
-const pack_tclunk = {buf, msg
-	if buf.len < 2 + 4
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.putle32(buf[2:6], msg.fid)
-	-> `std.Some buf[0:6]
-}
-
-const unpack_tclunk = {buf
-	if buf.len < 2 + 4 
-		-> `std.None
-	;;
-	-> `std.Some `Tclunk [
-		.tag=std.getle16(buf[0:2]),
-		.fid=std.getle32(buf[2:6]),
-	]
-}
-
-const pack_rclunk = {buf, msg
-	if buf.len < 2
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	-> `std.Some buf[0:2]
-}
-
-const unpack_rclunk = {buf
-	if buf.len < 2
-		-> `std.None
-	;;
-	-> `std.Some `Rclunk [
-		.tag=std.getle16(buf[0:2]),
-	]
-}
-
-const pack_tremove = {buf, msg
-	if buf.len < 2 + 4
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.putle32(buf[2:6], msg.fid)
-	-> `std.Some buf[0:6]
-}
-
-const unpack_tremove = {buf
-	if buf.len < 2 + 4
-		-> `std.None
-	;;
-	-> `std.Some `Tremove [
-		.tag=std.getle16(buf[0:2]),
-		.fid=std.getle32(buf[2:6]),
-	]
-}
-
-const pack_rremove = {buf, msg
-	if buf.len < 2
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	-> `std.Some buf[0:2]
-}
-
-const unpack_rremove = {buf
-	if buf.len < 2
-		-> `std.None
-	;;
-	-> `std.Some `Rremove [
-		.tag=std.getle16(buf[0:2]),
-	]
-}
-
-const pack_tstat = {buf, msg
-	if buf.len < 2 + 4
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.putle32(buf[2:6], msg.fid)
-	-> `std.Some buf[0:6]
-}
-
-const unpack_tstat = {buf
-	if buf.len < 2 + 4
-		-> `std.None
-	;;
-	-> `std.Some `Tstat [
-		.tag=std.getle16(buf[0:2]),
-		.fid=std.getle32(buf[2:6]),
-	]
-}
-
-const pack_stat = {buf, s : proto9.stat
-	var sz : uint32
-	var off : uint32
-
-	sz = 2 + 2 + 4 + qidlen + 4 + 4 + 4 + 8 + \
-		 2 + 2 + 2 + 2 + s.name.len + s.uid.len + \
-		 s.gid.len + s.muid.len
-	if buf.len < sz
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], sz-2)
-	std.putle16(buf[2:4], s.ty)
-	std.putle32(buf[4:8], s.dev)
-
-	std.get(pack_qid(buf[8:21], s.qid))
-	std.putle32(buf[21:25], s.mode)
-	std.putle32(buf[25:29], s.atime)
-	std.putle32(buf[29:33], s.mtime)
-	std.putle64(buf[33:41], s.len)
-
-	off = 41
-	std.putle16(buf[off:off+2], s.name.len)
-	off += 2
-	std.slcp(buf[off:off+s.name.len], s.name)
-	off += s.name.len
-
-	std.putle16(buf[off:off+2], s.uid.len)
-	off += 2
-	std.slcp(buf[off:off+s.uid.len], s.uid)
-	off += s.uid.len
-
-	std.putle16(buf[off:off+2], s.gid.len)
-	off += 2
-	std.slcp(buf[off:off+s.gid.len], s.gid)
-	off += s.gid.len
-
-	std.putle16(buf[off:off+2], s.muid.len)
-	off += 2
-	std.slcp(buf[off:off+s.uid.len], s.muid)
-	off += s.muid.len
-	-> `std.Some buf[:off]
-}
-
-const pack_rstat = {buf, msg
-	if buf.len < 4
-		-> `std.None
-	;;
-	std.putle16(buf[0:2], msg.tag)
-	match pack_stat(buf[4:], msg.stat)
-	| `std.Some s:
-		std.putle16(buf[2:4], s.len)
-		-> `std.Some buf[0:4+s.len]
-	| `std.None:
-		-> `std.None
 	;;
 }
 
-const unpack_stat = {buf
-	var s : stat
-	var off : uint32
-	var namelen : uint32
-	var uidlen : uint32
-	var gidlen : uint32
-	var muidlen : uint32
-
-	off = 2 + 2 + 4 + qidlen + 4 + 4 + 4 + 8
-	if buf.len < off
-		-> `std.None
-	;;
-
-	s.ty = std.getle16(buf[2:4])
-	s.dev = std.getle32(buf[4:8])
-	s.qid = std.get(unpack_qid(buf[8:21]))
-	s.mode = std.getle32(buf[21:25])
-	s.atime = std.getle32(buf[25:29])
-	s.mtime = std.getle32(buf[29:33])
-	s.len = std.getle64(buf[33:41])
-
-	if buf.len < off + 2
-		-> `std.None
-	;;
-	namelen = std.getle16(buf[off:off+2])
-	off += 2
-	if buf.len < off + namelen
-		-> `std.None
-	;;
-	s.name = buf[off:off+namelen]
-	off += namelen
-
-	if buf.len < off + 2
-		-> `std.None
-	;;
-	uidlen = std.getle16(buf[off:off+2])
-	off += 2
-	if buf.len < off + uidlen
-		-> `std.None
-	;;
-	s.uid = buf[off:off+uidlen]
-	off += uidlen
-
-	if buf.len < off + 2
-		-> `std.None
-	;;
-	gidlen = std.getle16(buf[off:off+2])
-	off += 2
-	if buf.len < off + gidlen
-		-> `std.None
-	;;
-	s.gid = buf[off:off+gidlen]
-	off += gidlen
-
-	if buf.len < off + 2
-		-> `std.None
-	;;
-	muidlen = std.getle16(buf[off:off+2])
-	off += 2
-	if buf.len < off + muidlen
-		-> `std.None
-	;;
-	s.muid = buf[off:off+muidlen]
-	off += muidlen
-	-> `std.Some s
-
-}
-
-const unpack_rstat = {buf
-	if buf.len < 4
-		-> `std.None
-	;;
-	match unpack_stat(buf[4:])
-	| `std.Some s:
-		-> `std.Some `Rstat [
-			.tag=std.getle16(buf[0:2]),
-			.stat=s,
-		]
-	| `std.None:
-		-> `std.None
+const rwalkunpack = {b, w, tag, oflow
+	w.tag = tag
+	w.nwqid = gbit16(b)
+	if w.nwqid > 16
+		oflow# = true
+	else
+		for var i = 0; i < w.nwqid; i++
+			w.wqid[i] = gqid(b)
+		;;
 	;;
 }
 
-const pack_twstat = {buf, msg
-	if buf.len < 2 + 4 + 2
-		-> `std.None
+const gbit8 : (bp : byte[:]# -> uint8)= {bp
+	var v : uint8
+
+	v = 0
+	if bp#.len >= 1
+		v = std.getle8(bp#[:1])
+		bp# = bp#[1:]
 	;;
-	std.putle16(buf[0:2], msg.tag)
-	std.putle32(buf[2:6], msg.fid)
-	match pack_stat(buf[8:], msg.stat)
-	| `std.Some s:
-		std.putle16(buf[6:8], s.len)
-		-> `std.Some buf[0:8+s.len]
-	| `std.None:
-		-> `std.None
-	;;
+	-> v
 }
 
-const unpack_twstat = {buf
-	if buf.len < 2 + 4 + 2
-		-> `std.None
+const gbit16 = {bp
+	var v
+
+	v = 0
+	if bp#.len >= 2
+		v = std.getle16(bp#[:2])
+		bp# = bp#[2:]
 	;;
-	match unpack_stat(buf[8:])
-	| `std.Some s:
-		-> `std.Some `Twstat [
-			.tag=std.getle16(buf[0:2]),
-			.fid=std.getle32(buf[2:6]),
-			.stat=s,
-		]
-	| `std.None:
-		-> `std.None
-	;;
+	-> v
 }
 
-const pack_rwstat = {buf, msg
-	if buf.len < 2
-		-> `std.None
+const gbit32 = {bp
+	var v
+
+	v = 0
+	if bp#.len >= 4
+		v = std.getle32(bp#[:4])
+		bp# = bp#[4:]
 	;;
-	std.putle16(buf[0:2], msg.tag)
-	-> `std.Some buf[0:2]
+	-> v
 }
 
-const unpack_rwstat = {buf
-	if buf.len < 2
-		-> `std.None
+const gbit64 = {bp
+	var v
+
+	v = 0
+	if bp#.len >= 8
+		v = std.getle64(bp#[:8])
+		bp# = bp#[8:]
 	;;
-	-> `std.Some `Rwstat [
-		.tag=std.getle16(buf[0:2]),
-	]
+	-> v
+}
+
+const gstr = {bp, oflow
+	var v, len
+
+	if bp#.len < 2
+		-> ""
+	;;
+	len = gbit16(bp)
+	if bp#.len < len
+		oflow# = true
+		-> ""
+	;;
+	v  = bp#[:len]
+	bp# = bp#[len:]
+	-> v
+
+}
+
+const gdata = {bp, oflow
+	var v, len
+
+	if bp#.len < 4
+		-> ""
+	;;
+	len = gbit32(bp)
+	if bp#.len < len
+		oflow# = true
+		-> ""
+	;;
+	v  = bp#[:len]
+	bp# = bp#[len:]
+	-> v
+
+}
+
+const gstat = {bp, oflow
+	var st
+	var sz
+
+	sz = gbit16(bp)
+	sz = gbit16(bp)
+	st.ty = gbit16(bp)
+	st.dev = gbit32(bp)
+	st.qid.ty = gbit8(bp)
+	st.qid.vers = gbit32(bp)
+	st.qid.path = gbit64(bp)
+	st.mode = gbit32(bp)
+	st.atime = gbit32(bp)
+	st.mtime = gbit32(bp)
+	st.len = gbit64(bp)
+	st.name = gstr(bp, oflow)
+	st.uid = gstr(bp, oflow)
+	st.gid = gstr(bp, oflow)
+	st.muid = gstr(bp, oflow)
+	-> st
+}
+
+const gqid = {bp
+	var q
+
+	q.ty = gbit8(bp)
+	q.vers = gbit32(bp)
+	q.path = gbit64(bp)
+	-> q
+}
+
+const pbit8 = {bp, v
+	if bp#.len >= 1
+		std.putle8(bp#[:1], v)
+		bp# = bp#[1:]
+	;;
+	-> 1
+}
+
+const pbit16 = {bp, v
+	if bp#.len >= 2
+		std.putle16(bp#[:2], v)
+		bp# = bp#[2:]
+	;;
+	-> 2
+}
+
+const pbit32 = {bp, v
+	if bp#.len >= 4
+		std.putle32(bp#[:4], v)
+		bp# = bp#[4:]
+	;;
+	-> 4
+}
+
+const pbit64 = {bp, v
+	if bp#.len >= 8
+		std.putle64(bp#[:8], v)
+		bp# = bp#[8:]
+	;;
+	-> 8
+}
+
+const pstr = {bp, v
+	if bp#.len >= 2 + v.len
+		std.putle16(bp#[:2], v.len)
+		std.slcp(bp#[2:v.len+2], v)
+		bp# = bp#[v.len + 2:]
+	;;
+	-> 2 + v.len
+}
+
+const pdata = {bp, v
+	if bp#.len >= 4 + v.len
+		std.putle32(bp#[:4], v.len)
+		for var i = 0; i < v.len; i++
+			bp#[i + 4] = v[i]
+		;;
+		bp# = bp#[v.len:]
+	;;
+	-> v.len + 4
+}
+
+const pqid = {bp, v
+	var sz
+
+	sz = 0
+	sz += pbit8(bp, v.ty)
+	sz += pbit32(bp, v.vers)
+	sz += pbit64(bp, v.path)
+	-> sz
+}
+
+const pstat = {bp, st
+	var sz
+	var statsize
+
+	statsize = Statfixsz + \
+		st.name.len + \
+		st.uid.len + \
+		st.gid.len + \
+		st.muid.len
+
+	sz = 0
+	sz += pbit16(bp, (statsize : uint16))
+	sz += pbit16(bp, (statsize : uint16) - 2)
+	sz += pbit16(bp, st.ty)
+	sz += pbit32(bp, st.dev)
+	sz += pbit8(bp, st.qid.ty)
+	sz += pbit32(bp, st.qid.vers)
+	sz += pbit64(bp, st.qid.path)
+	sz += pbit32(bp, st.mode)
+	sz += pbit32(bp, st.atime)
+	sz += pbit32(bp, st.mtime)
+	sz += pbit64(bp, st.len)
+	sz += pstr(bp, st.name)
+	sz += pstr(bp, st.uid)
+	sz += pstr(bp, st.gid)
+	sz += pstr(bp, st.muid)
+	-> sz
 }
