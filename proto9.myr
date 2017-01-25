@@ -90,8 +90,6 @@ pkg proto9 =
 		`Rwstat rwstat
 	;;
 	
-	const qidlen : uint32 = 13
-	
 	type qid = struct
 		ty	: uint8
 		vers	: uint32
